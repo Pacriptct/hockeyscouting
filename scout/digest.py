@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import os
 import smtplib
+from urllib.parse import quote_plus
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -32,8 +33,10 @@ def build(payload: dict, size: int, site_url: str = "") -> tuple[str, str, str]:
         link = p.get("profile_url") or ""
         name = html.escape(p["name"])
         name_html = f'<a href="{html.escape(link)}">{name}</a>' if link else name
+        ig = ("https://www.google.com/search?q="
+              + quote_plus(f'"{p["name"]}" {p.get("team", "")} site:instagram.com'))
         rows.append(
-            f"<tr><td>{p['score']}</td><td>{name_html}</td><td>{p.get('position') or ''}</td>"
+            f"<tr><td>{p['score']}</td><td>{name_html}<br><a href=\"{html.escape(ig)}\">Find IG</a></td><td>{p.get('position') or ''}</td>"
             f"<td>{p.get('birth_year') or ''}</td><td>{html.escape(p.get('team', ''))}</td>"
             f"<td>{html.escape(p.get('league', ''))}</td><td>{_stat_line(p)}</td>"
             f"<td>{html.escape('; '.join(p.get('notes', [])))}</td></tr>"

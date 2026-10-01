@@ -33,6 +33,8 @@
       <select id="f-year"><option value="">All birth years</option></select>
       <label class="check"><input id="f-new" type="checkbox"> New today</label>
       <label class="check"><input id="f-hide-pass" type="checkbox" checked> Hide passed</label>
+      <label class="check"><input id="f-follow" type="checkbox"> Follow-ups due</label>
+      <label class="check"><input id="f-ig" type="checkbox"> Has IG</label>
       <button id="export" class="ghost">Export CSV</button>
     </div>
     <p id="count" class="muted"></p>
@@ -42,7 +44,7 @@
           <th data-sort="score">Score</th>
           <th data-sort="name">Player</th>
           <th data-sort="position" class="hide-sm">Pos</th>
-          <th data-sort="birth_year">YOB</th>
+          <th data-sort="birth_year" class="hide-sm">YOB</th>
           <th data-sort="team">Team / League</th>
           <th data-sort="ppg" class="hide-sm">Stats</th>
           <th>Status</th>
@@ -72,7 +74,8 @@
     <label class="block">Coach phone <input id="t-coach-phone"></label>
     <label class="block">Email subject <input id="t-subject"></label>
     <label class="block">Email body <textarea id="t-email" rows="10"></textarea></label>
-    <label class="block">DM (Instagram / X) <textarea id="t-dm" rows="5"></textarea></label>
+    <label class="block">Instagram DM <textarea id="t-dm" rows="5"></textarea></label>
+    <label class="block">Follow-up DM (no answer after a few days) <textarea id="t-followup" rows="4"></textarea></label>
     <div class="row">
       <button id="t-save">Save</button>
       <button id="t-reset" class="ghost">Reset to default</button>

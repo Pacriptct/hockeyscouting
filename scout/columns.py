@@ -22,7 +22,7 @@ ALIASES = {
     "pos_raw": ["pos", "position", "p"],
     "birth_year": ["yob", "birth year", "birthyear", "by", "year of birth", "born"],
     "dob": ["dob", "birthdate", "birth date", "date of birth", "bd"],
-    "shoots": ["shoots", "sh", "shot", "catches", "s c", "sc"],
+    "shoots": ["shoots", "catches", "s/c", "s c", "shoots/catches"],
     "height": ["height", "ht"],
     "weight": ["weight", "wt"],
     "hometown": ["hometown", "home town", "birthplace", "birth place", "home", "city"],
@@ -75,6 +75,12 @@ def map_headers(headers: list[str], goalie_table: bool = False) -> dict[int, str
             out[i] = f
             used.add(f)
     return out
+
+
+def _shoots(v) -> str:
+    """Only L / R - anything else is some other column that got mislabeled."""
+    v = (v or "").strip().upper()
+    return v[0] if v[:1] in ("L", "R") and (len(v) == 1 or v in ("LEFT", "RIGHT")) else ""
 
 
 def fix_case(name: str) -> str:
@@ -135,7 +141,7 @@ def row_to_player(values: dict, *, team="", league="", level="Other",
         position=norm_position(pos_raw),
         birth_year=by,
         dob=dob,
-        shoots=(values.get("shoots") or "").strip(),
+        shoots=_shoots(values.get("shoots")),
         height=(values.get("height") or "").strip(),
         weight=(values.get("weight") or "").strip(),
         hometown=(values.get("hometown") or "").strip(),

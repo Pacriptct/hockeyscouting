@@ -305,3 +305,11 @@ def test_gamesheet_direct(monkeypatch):
     assert calls[0][0] == "https://gamesheetstats.com/api/players/standings/15125"
     assert calls[0][1]["offset"] == 0 and calls[1][1]["offset"] == 500
     assert ps[0].team == "Team A" and ps[0].position == "F"
+
+
+def test_sh_column_is_not_shoots():
+    cols = map_headers(["Name", "GP", "G", "A", "PTS", "SH", "S/C"])
+    assert "shoots" not in [cols.get(5)]
+    from scout.columns import row_to_player
+    assert row_to_player({"name": "A B", "shoots": "19"}).shoots == ""
+    assert row_to_player({"name": "A B", "shoots": "Left"}).shoots == "L"

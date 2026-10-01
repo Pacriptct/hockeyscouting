@@ -31,11 +31,18 @@ GAA. All the weights are in `config.yaml`.
   birth year, status, or "new today". Click a player for stats, links
   (profile, Elite Prospects, Instagram/X/Google searches, team staff) and
   the outreach buttons.
-- **Copy email / Copy DM / Open in mail app**: fills in the template with
-  his name, team, league and position.
+- **Instagram**: each player has an IG handle box. Don't know it yet?
+  *Google his IG*, *Search on Instagram* and *Team's IG* (players get
+  tagged in team posts) help find it. Then **Copy DM & open chat** copies
+  the DM, opens his DMs in the Instagram app (ig.me link) and marks him
+  DM'd with today's date. Paste and send.
+- **Follow-ups**: tick *Follow-ups due* on the board to see guys you DM'd
+  5+ days ago who haven't been moved to *Replied*. *Copy follow-up* sends
+  the second message and logs it.
+- **Copy email / Open in mail app**: same idea for email.
 - **Status**: Not reviewed → Checked → Reached out → Talking → Visit → Pass.
 - **My pipeline**: everyone you've marked, by status.
-- **Templates**: edit the email + DM, coach name/email/phone.
+- **Templates**: edit the DM, follow-up, email, coach name/email/phone.
 - **Export CSV**: whatever's currently filtered, with your statuses + notes.
 
 Statuses and notes are saved in the browser. Use *Templates → Download

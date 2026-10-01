@@ -93,6 +93,10 @@ th.sorted { color: var(--text); }
   background: var(--chip); color: var(--muted); margin-left: 4px; vertical-align: 1px;
 }
 .badge.new { background: var(--accent); color: #fff; }
+.badge.follow { background: var(--warn); color: #fff; }
+.ig-box { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 12px 0; }
+.ig-box h3 { margin: 0 0 4px; font-size: 14px; }
+.ig-box .links { margin: 4px 0 8px; }
 .status { font-size: 12px; font-weight: 600; white-space: nowrap; }
 .status[data-s="verified"] { color: var(--warn); }
 .status[data-s="contacted"], .status[data-s="talking"] { color: var(--good); }
