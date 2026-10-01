@@ -3,6 +3,7 @@ python -m scout --probe URL [--no-render]"""
 
 import argparse
 import logging
+import os
 
 from . import digest
 from .pipeline import load_config, run
@@ -29,6 +30,8 @@ def main():
         cfg["sources"] = [s for s in cfg["sources"] if args.only.lower() in s["name"].lower()]
     payload = run(cfg)
     print(f"{payload['count']} prospects on the board, {payload['new_count']} new today")
+    if not os.environ.get("GITHUB_ACTIONS"):
+        print("(saved to site/data/prospects.local.json - the dashboard shows it when run locally)")
     if args.email:
         digest.send(payload, int(cfg.get("digest_size", 40)))
 

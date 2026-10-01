@@ -369,7 +369,9 @@ function setupEvents() {
 async function init() {
   setupEvents();
   try {
-    const r = await fetch(`data/prospects.json?ts=${Date.now()}`);
+    // a run on my own computer writes prospects.local.json - use it if it's there
+    let r = await fetch(`data/prospects.local.json?ts=${Date.now()}`).catch(() => null);
+    if (!r || !r.ok) r = await fetch(`data/prospects.json?ts=${Date.now()}`);
     DATA = await r.json();
   } catch {}
   if (DATA.generated) {

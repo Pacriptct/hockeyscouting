@@ -313,3 +313,13 @@ def test_sh_column_is_not_shoots():
     from scout.columns import row_to_player
     assert row_to_player({"name": "A B", "shoots": "19"}).shoots == ""
     assert row_to_player({"name": "A B", "shoots": "Left"}).shoots == "L"
+
+
+def test_local_runs_write_ignored_file(tmp_path, monkeypatch):
+    cfg = dict(CFG, sources=[])
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    pipeline.run(cfg, today=date(2026, 10, 1), out_dir=tmp_path)
+    assert (tmp_path / "prospects.local.json").exists() and not (tmp_path / "prospects.json").exists()
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    pipeline.run(cfg, today=date(2026, 10, 1), out_dir=tmp_path)
+    assert (tmp_path / "prospects.json").exists()

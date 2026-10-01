@@ -135,6 +135,6 @@ sending messages under the NCAA banner.
 ```
 pip install -r requirements-dev.txt
 pytest
-python -m scout                 # full run, writes site/data/prospects.json
+python -m scout                 # full run, writes site/data/prospects.local.json
 cd site && python -m http.server # dashboard at http://localhost:8000
 ```

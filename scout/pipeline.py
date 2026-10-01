@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import traceback
 from datetime import date, timedelta
 from pathlib import Path
@@ -18,7 +19,8 @@ log = logging.getLogger("scout")
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "site" / "data"
-DROP_AFTER_DAYS = 45  # forget players we haven't seen on any source in this long
+DROP_AFTER_DAYS = 45
+LOCAL_FILE = "prospects.local.json"  # forget players we haven't seen on any source in this long
 
 
 def load_config(path: Path | None = None) -> dict:
@@ -111,10 +113,14 @@ def run(cfg: dict | None = None, today: date | None = None, out_dir: Path = DATA
     players = score_all(dedupe(raw), cfg)
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    pfile = out_dir / "prospects.json"
+    # Only the GitHub run writes the real file. Runs on my own computer go to
+    # an ignored file so they never clash with the daily update on git pull.
+    official = out_dir / "prospects.json"
+    pfile = official if os.environ.get("GITHUB_ACTIONS") else out_dir / LOCAL_FILE
     old = {}
-    if pfile.exists():
-        old = {d["id"]: d for d in json.loads(pfile.read_text()).get("players", [])}
+    src = pfile if pfile.exists() else official
+    if src.exists():
+        old = {d["id"]: d for d in json.loads(src.read_text()).get("players", [])}
 
     any_ok = any(r["ok"] and r["count"] for r in report)
     if not any_ok and old:
