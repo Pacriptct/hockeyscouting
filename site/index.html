@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wittenberg Hockey Recruiting</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Wittenberg Hockey Recruiting</h1>
+    <p id="meta" class="muted">Loading…</p>
+  </div>
+  <nav class="tabs">
+    <button data-tab="board" class="active">Board</button>
+    <button data-tab="pipeline">My pipeline</button>
+    <button data-tab="sources">Sources</button>
+    <button data-tab="settings">Templates</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-board" class="tab active">
+    <div class="filters">
+      <input id="q" type="search" placeholder="Search name, team, hometown…">
+      <select id="f-status"><option value="">All statuses</option></select>
+      <select id="f-pos">
+        <option value="">All positions</option><option>F</option><option>D</option><option>G</option>
+      </select>
+      <select id="f-level"><option value="">All levels</option></select>
+      <select id="f-league"><option value="">All leagues</option></select>
+      <select id="f-year"><option value="">All birth years</option></select>
+      <label class="check"><input id="f-new" type="checkbox"> New today</label>
+      <label class="check"><input id="f-hide-pass" type="checkbox" checked> Hide passed</label>
+      <button id="export" class="ghost">Export CSV</button>
+    </div>
+    <p id="count" class="muted"></p>
+    <div class="table-wrap">
+      <table id="grid">
+        <thead><tr>
+          <th data-sort="score">Score</th>
+          <th data-sort="name">Player</th>
+          <th data-sort="position" class="hide-sm">Pos</th>
+          <th data-sort="birth_year">YOB</th>
+          <th data-sort="team">Team / League</th>
+          <th data-sort="ppg" class="hide-sm">Stats</th>
+          <th>Status</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <button id="more" class="ghost wide" hidden>Show more</button>
+  </section>
+
+  <section id="tab-pipeline" class="tab">
+    <div id="pipeline-cols" class="pipeline"></div>
+  </section>
+
+  <section id="tab-sources" class="tab">
+    <table class="simple">
+      <thead><tr><th>Source</th><th>Type</th><th>Players</th><th>Status</th></tr></thead>
+      <tbody id="sources-body"></tbody>
+    </table>
+    <p class="muted">Sources are set in <code>config.yaml</code>. Failed sources are retried on the next daily run.</p>
+  </section>
+
+  <section id="tab-settings" class="tab">
+    <p class="muted">Placeholders: <code>{first}</code> <code>{last}</code> <code>{name}</code> <code>{team}</code> <code>{league}</code> <code>{position}</code> <code>{coach}</code> <code>{coach_email}</code> <code>{coach_phone}</code></p>
+    <label class="block">Coach name <input id="t-coach"></label>
+    <label class="block">Coach email <input id="t-coach-email"></label>
+    <label class="block">Coach phone <input id="t-coach-phone"></label>
+    <label class="block">Email subject <input id="t-subject"></label>
+    <label class="block">Email body <textarea id="t-email" rows="10"></textarea></label>
+    <label class="block">DM (Instagram / X) <textarea id="t-dm" rows="5"></textarea></label>
+    <div class="row">
+      <button id="t-save">Save</button>
+      <button id="t-reset" class="ghost">Reset to default</button>
+    </div>
+    <hr>
+    <h3>Backup</h3>
+    <p class="muted">Statuses and notes live in this browser. Back them up or move them to another device here.</p>
+    <div class="row">
+      <button id="backup" class="ghost">Download backup</button>
+      <label class="ghost button">Restore backup <input id="restore" type="file" accept=".json" hidden></label>
+    </div>
+  </section>
+</main>
+
+<dialog id="detail">
+  <form method="dialog" class="close-row"><button class="ghost" aria-label="Close">✕</button></form>
+  <div id="detail-body"></div>
+</dialog>
+
+<div id="toast" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>
