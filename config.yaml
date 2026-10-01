@@ -57,7 +57,8 @@ level_weights:
 # (not just top 10 leaders), copy the address. Then test it with the
 # "Probe a stats page" action on GitHub before adding it here. Stats URLs on
 # SportsEngine / GameSheet sites change every season, so expect to update
-# them each fall.
+# them each fall. NAHL / NA3HL have season_id in the URL: grab the new one
+# from their stats page when the season changes.
 sources:
 
   # ---------------------------------------------------------------- Tier I
@@ -74,21 +75,23 @@ sources:
     type: league_site
     league: EHL
     level: Tier II
-    url: https://www.easternhockeyleague.org/stats/division_instance/343728
+    url: "https://easternhockeyleague.org/view/ehl-skaters/"
+    goalie_url: "https://easternhockeyleague.org/view/ehl-goalies/"
     render: true
     enabled: true
   - name: NAHL
     type: league_site
     league: NAHL
     level: Tier II
-    url: ""
+    url: "https://nahl.com/skater-stats/?league_id=4&season_id=15192&stat_class=&team_id=all-teams&club_id_m="
+    goalie_url: "https://nahl.com/goalie-stats/?league_id=4&season_id=15192&stat_class=&team_id=all-teams&club_id_m="
     render: true
     enabled: true
   - name: USPHL NCDC
     type: league_site
     league: USPHL NCDC
     level: Tier II
-    url: https://usphl.com/ncdc/league-hub/
+    url: "https://usphl.com/ncdc/game-center/skater-goalies/?tab=0&sortColumn=points&sortAsc=false"
     render: true
     enabled: true
 
@@ -97,21 +100,23 @@ sources:
     type: league_site
     league: EHLP
     level: Tier III
-    url: ""
+    url: "https://easternhockeyleague.org/view/ehlp-skaters/"
+    goalie_url: "https://easternhockeyleague.org/view/ehlp-goalies/"
     render: true
     enabled: true
   - name: NA3HL
     type: league_site
     league: NA3HL
     level: Tier III
-    url: ""
+    url: "https://www.na3hl.com/skater-stats/?league_id=5&season_id=15275&stat_class=&team_id=all-teams&club_id_m="
+    goalie_url: "https://www.na3hl.com/goalie-stats/?league_id=5&season_id=15275&stat_class=&team_id=all-teams&club_id_m="
     render: true
     enabled: true
   - name: USPHL Premier
     type: league_site
     league: USPHL Premier
     level: Tier III
-    url: https://usphl.com/premier/league-hub/
+    url: "https://usphl.com/premier/game-center/skater-goalies/?tab=0&sortColumn=points&sortAsc=false"
     render: true
     enabled: true
 
@@ -120,7 +125,7 @@ sources:
     type: league_site
     league: USPHL Elite
     level: Tier III Dev
-    url: https://usphl.com/elite/league-hub/
+    url: "https://usphl.com/elite/game-center/skater-goalies/?tab=0&sortColumn=points&sortAsc=false"
     render: true
     enabled: true
 
@@ -208,7 +213,8 @@ sources:
     type: league_site
     league: CCHL
     level: Canadian Jr A
-    url: ""
+    url: "https://www.thecchl.ca/stats/player-stats"
+    goalie_url: "https://www.thecchl.ca/stats/goalie-stats"
     render: true
     enabled: true
   - name: OJHL
@@ -229,28 +235,39 @@ sources:
     type: league_site
     league: BCHL
     level: Canadian Jr A
-    url: ""
+    url: "https://bchl.ca/stats/player-stats?sort=points"
     render: true
     enabled: true
   - name: AJHL
     type: league_site
     league: AJHL
     level: Canadian Jr A
-    url: ""
+    url: "https://www.ajhl.ca/stats/player-stats"
+    goalie_url: "https://www.ajhl.ca/stats/goalie-stats"
     render: true
     enabled: true
   - name: SJHL
     type: league_site
     league: SJHL
     level: Canadian Jr A
-    url: ""
+    url: "https://www.sjhl.ca/stats/player-stats"
+    goalie_url: "https://www.sjhl.ca/stats/goalie-stats"
+    render: true
+    enabled: true
+  - name: SIJHL
+    type: league_site
+    league: SIJHL
+    level: Canadian Jr A
+    url: "https://sijhlhockey.com/stats/player-stats"
+    goalie_url: "https://sijhlhockey.com/stats/goalie-stats"
     render: true
     enabled: true
   - name: MJHL
     type: league_site
     league: MJHL
     level: Canadian Jr A
-    url: ""
+    url: "https://www.mjhlhockey.ca/stats/player-stats"
+    goalie_url: "https://www.mjhlhockey.ca/stats/goalie-stats"
     render: true
     enabled: true
   - name: MJAHL
