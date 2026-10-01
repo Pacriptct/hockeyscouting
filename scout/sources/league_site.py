@@ -68,9 +68,50 @@ JSON_KEYS.update({"gp": "gp", "pts": "pts", "pim": "pim", "gaa": "gaa"})
 FLATTEN_INTO = {"row", "player", "stats", "stat", "data", "attributes", "regularstats", "statistics", "person"}
 
 
+SCALAR_WRAPPERS = ("title", "value", "text", "label", "display", "name", "fullName", "abbreviation")
+
+
+WRAPPER_EXTRAS = {"id", "href", "url", "link", "slug", "type", "abbreviation", "abbr", "logo", "image", "key"}
+
+
+def _unwrap(v):
+    """{"title": "John Smith", "id": 4} -> "John Smith" when it's just a wrapped value."""
+    if isinstance(v, dict) and len(v) <= 4:
+        for k in SCALAR_WRAPPERS:
+            if k in v and not isinstance(v[k], (dict, list)):
+                extra = {_k(x) for x in v} - {_k(k)}
+                if extra <= WRAPPER_EXTRAS:
+                    return v[k]
+    return v
+
+
+def _columnar_rows(node: dict) -> list[dict] | None:
+    """{"name": [...], "gp": [...], ...} -> [{"name":..., "gp":...}, ...]"""
+    cols = {k: v for k, v in node.items() if isinstance(v, list) and len(v) >= 2}
+    if len(cols) < 3:
+        return None
+    lengths = {}
+    for k, v in cols.items():
+        lengths.setdefault(len(v), []).append(k)
+    n, keys = max(lengths.items(), key=lambda x: len(x[1]))
+    if len(keys) < 3:
+        return None
+    rows = []
+    for i in range(n):
+        row = {}
+        for k in keys:
+            v = _unwrap(cols[k][i])
+            if isinstance(v, list):
+                v = v[0] if v else None
+            row[k] = _unwrap(v)
+        rows.append(row)
+    return rows
+
+
 def _flatten(d: dict, prefix: str = "", depth: int = 0) -> dict:
     out = {}
     for k, v in d.items():
+        v = _unwrap(v)
         if isinstance(v, dict) and depth < 2:
             sub = _flatten(v, _k(k), depth + 1)
             for sk, sv in sub.items():
@@ -131,6 +172,14 @@ def find_player_lists(data, raw_out: list | None = None) -> list[list[dict]]:
             for x in node:
                 walk(x, depth + 1)
         elif isinstance(node, dict):
+            col_rows = _columnar_rows(node)
+            if col_rows:
+                rows = [json_row_values(x) for x in col_rows]
+                if _looks_like_players(rows, col_rows):
+                    found.append(rows)
+                    if raw_out is not None:
+                        raw_out.append(col_rows[0])
+                    return
             for v in node.values():
                 walk(v, depth + 1)
 
@@ -366,6 +415,18 @@ def fetch(cfg: dict, ctx: dict) -> list[Player]:
     return best_per_player(out)
 
 
+def _shape(node, depth=0) -> str:
+    """Short outline of a JSON structure, for probe output."""
+    if depth > 3:
+        return "..."
+    if isinstance(node, dict):
+        items = list(node.items())[:12]
+        return "{" + ", ".join(f"{k}: {_shape(v, depth + 1)}" for k, v in items) + (", ..." if len(node) > 12 else "") + "}"
+    if isinstance(node, list):
+        return f"[{len(node)} x {_shape(node[0], depth + 1) if node else '-'}]"
+    return type(node).__name__
+
+
 def probe(url: str, render: bool = True) -> None:
     """Print what the scraper can see on a page. Used to test a URL before
     adding it to config.yaml."""
@@ -400,6 +461,11 @@ def probe(url: str, render: bool = True) -> None:
             find_player_lists(data, raw)
             if raw:
                 print("    first record: " + json.dumps(raw[0], default=str)[:700])
+    for feed_url, data in feeds:
+        if not players_from_json(data, cfg=cfg, source_url=url) and "challenge" not in feed_url:
+            print(f"  no players recognized in: {feed_url[:160]}")
+            print("    shape: " + _shape(data))
+            print("    start: " + json.dumps(data, default=str)[:1200])
     print(f"  -> players read from feeds: {total_feed}\n")
 
     nxt = next_link(html, url)

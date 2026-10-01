@@ -76,7 +76,7 @@ sources:
     type: league_site
     league: EHL
     level: Tier II
-    url: "https://easternhockeyleague.org/view/ehl-skaters/"
+    url: "https://gamesheetstats.com/seasons/15125/players"  # EHL embeds GameSheet; season id changes yearly
     goalie_url: "https://easternhockeyleague.org/view/ehl-goalies/"
     render: true
     enabled: true
@@ -101,7 +101,7 @@ sources:
     type: league_site
     league: EHLP
     level: Tier III
-    url: "https://easternhockeyleague.org/view/ehlp-skaters/"
+    url: "https://gamesheetstats.com/seasons/15290/players"  # EHLP on GameSheet
     goalie_url: "https://easternhockeyleague.org/view/ehlp-goalies/"
     render: true
     enabled: true

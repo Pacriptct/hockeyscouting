@@ -223,3 +223,18 @@ def test_hockeytech_roster_enrichment(monkeypatch):
     hockeytech.enrich_from_rosters(
         [p], "https://lscluster.hockeytech.com/feed/index.php?feed=statviewfeed&season=48&key=k&client_code=ajhl")
     assert p.birth_year == 2006 and p.team == "Camrose Kodiaks" and p.hometown == "Red Deer, AB"
+
+
+def test_columnar_feed():
+    data = {"data": {
+        "ids": [1, 2, 3],
+        "name": [{"title": "Joe Smith", "id": 1}, {"title": "Al Jones", "id": 2}, {"title": "Bo Hill", "id": 3}],
+        "team": [{"title": "Valley Jr Warriors"}, {"title": "Valley Jr Warriors"}, {"title": "Seahawks"}],
+        "pos": ["F", "D", "F"],
+        "gp": [10, 9, 8], "g": [5, 1, 2], "a": [6, 4, 2], "pts": [11, 5, 4],
+        "birthdate": ["2006-01-02", "2007-03-04", "2008-05-06"],
+    }}
+    ps = league_site.players_from_json(data, cfg={"name": "EHL", "league": "EHL"}, source_url="u")
+    joe = ps[0]
+    assert [p.name for p in ps] == ["Joe Smith", "Al Jones", "Bo Hill"]
+    assert (joe.team, joe.gp, joe.pts, joe.birth_year, joe.position) == ("Valley Jr Warriors", 10, 11, 2006, "F")
