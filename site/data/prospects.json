@@ -1,1 +1,240 @@
-{"generated": "", "season": "", "program": {}, "count": 0, "new_count": 0, "sources": [], "players": []}
+{
+ "generated": "2026-10-01",
+ "season": "2026-2027",
+ "program": {
+  "name": "Wittenberg University Men's Hockey",
+  "level": "ACHA D2 (moving to NCAA D3)",
+  "coach_name": "",
+  "coach_email": "",
+  "coach_phone": ""
+ },
+ "count": 0,
+ "new_count": 0,
+ "sources": [
+  {
+   "name": "EHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": true,
+   "error": "",
+   "setup": false
+  },
+  {
+   "name": "NAHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "USPHL NCDC",
+   "type": "league_site",
+   "count": 0,
+   "ok": true,
+   "error": "",
+   "setup": false
+  },
+  {
+   "name": "EHLP",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "NA3HL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "USPHL Premier",
+   "type": "league_site",
+   "count": 0,
+   "ok": true,
+   "error": "",
+   "setup": false
+  },
+  {
+   "name": "USPHL Elite",
+   "type": "league_site",
+   "count": 0,
+   "ok": true,
+   "error": "",
+   "setup": false
+  },
+  {
+   "name": "AYHL 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "BEAST 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "CSDHL 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "ECEL 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "EJEPL 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "MNHP 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "NAPHL 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "NAT1HL 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "T1EHL 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "THF 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "UT1HL 18U",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "CCHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "OJHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "NOJHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "BCHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "AJHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "SJHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "MJHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "MJAHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "QJHL",
+   "type": "league_site",
+   "count": 0,
+   "ok": false,
+   "error": "Needs a stats page URL in config.yaml",
+   "setup": true
+  },
+  {
+   "name": "Imports",
+   "type": "csv_folder",
+   "count": 0,
+   "ok": true,
+   "error": "",
+   "setup": false
+  }
+ ],
+ "players": []
+}
