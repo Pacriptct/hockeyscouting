@@ -238,3 +238,19 @@ def test_columnar_feed():
     joe = ps[0]
     assert [p.name for p in ps] == ["Joe Smith", "Al Jones", "Bo Hill"]
     assert (joe.team, joe.gp, joe.pts, joe.birth_year, joe.position) == ("Valley Jr Warriors", 10, 11, 2006, "F")
+
+
+def test_gamesheet_record():
+    # shape copied from gamesheetstats.com/api/players/standings
+    rec = {"birthdate": "2006-08-05", "firstName": "ALEX", "height": "5' 9", "hometown": "Bensalem",
+           "id": 8612973, "jersey": "11", "lastName": "HOOD", "photoUrl": None, "positions": ["forward"],
+           "stats": {"a": 1, "g": 3, "gp": 3, "pim": 0, "pm": 0, "pts": 4, "ptspg": 1.33},
+           "teams": [{"abbreviation": "PHI", "active": True, "committedTo": None, "id": 526642,
+                      "title": "Philadelphia Little Flyers"}]}
+    other = dict(rec, firstName="JOE", positions=["defense"], teams=[dict(rec["teams"][0], committedTo="Univ (ACHA)")])
+    ps = league_site.players_from_json({"data": [rec, other]}, cfg={"name": "EHL", "league": "EHL"}, source_url="u")
+    alex, joe = ps
+    assert alex.name == "Alex Hood" and alex.position == "F" and alex.birth_year == 2006
+    assert (alex.gp, alex.g, alex.a, alex.pts) == (3, 3, 1, 4)
+    assert alex.team == "Philadelphia Little Flyers" and alex.hometown == "Bensalem"
+    assert joe.position == "D" and joe.committed == "Univ (ACHA)"

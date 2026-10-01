@@ -58,7 +58,9 @@ JSON_KEYS.update({
     "goalsagainstaverage": "gaa", "savepercentage": "sv_pct", "savepct": "sv_pct",
     "birthdate": "dob", "dateofbirth": "dob", "birthday": "dob", "yearofbirth": "birth_year",
     "birthyear": "birth_year", "playerposition": "pos_raw", "position": "pos_raw",
-    "positionabbreviation": "pos_raw", "pos": "pos_raw", "hometown": "hometown",
+    "positionabbreviation": "pos_raw", "pos": "pos_raw", "positions": "pos_raw",
+    "teamsname": "team", "teamstitle": "team",
+    "committedto": "committed", "teamscommittedto": "committed", "hometown": "hometown",
     "birthplace": "hometown", "shoots": "shoots", "catches": "shoots",
 })
 # single letters are too risky as JSON keys ("a", "p" show up everywhere)
@@ -66,6 +68,9 @@ for _bad in ("p", "a", "g", "x", "by", "bd", "sh", "pm", "pct", "url", "link", "
     JSON_KEYS.pop(_bad, None)
 JSON_KEYS.update({"gp": "gp", "pts": "pts", "pim": "pim", "gaa": "gaa"})
 FLATTEN_INTO = {"row", "player", "stats", "stat", "data", "attributes", "regularstats", "statistics", "person"}
+# one-letter stat keys are only trusted inside a stats block ("stats": {"g": 3, "a": 1})
+for _p in ("row", "stats", "stat", "regularstats", "statistics"):
+    JSON_KEYS.update({_p + "g": "g", _p + "a": "a", _p + "pm": "plus_minus", _p + "p": "pts"})
 
 
 SCALAR_WRAPPERS = ("title", "value", "text", "label", "display", "name", "fullName", "abbreviation")
@@ -119,9 +124,21 @@ def _flatten(d: dict, prefix: str = "", depth: int = 0) -> dict:
             if _k(k) in FLATTEN_INTO:
                 for sk, sv in _flatten(v, "", depth + 1).items():
                     out.setdefault(sk, sv)
+        elif isinstance(v, list) and v and depth < 2:
+            first = _unwrap(v[0])
+            if isinstance(first, dict):
+                # "teams": [{...}] -> teamsname, teamscommittedto, ...
+                for sk, sv in _flatten(first, prefix + _k(k), depth + 1).items():
+                    out.setdefault(sk, sv)
+            elif not isinstance(first, list):
+                out.setdefault(prefix + _k(k), first)
         elif not isinstance(v, (list, dict)):
             out.setdefault(prefix + _k(k), v)
     return out
+
+
+TEAM_PRIORITY = ["teamname", "teamsname", "teamtitle", "teamstitle", "teamfullname", "team",
+                 "teamcode", "teamsabbreviation", "teamabbreviation"]
 
 
 def json_row_values(item: dict) -> dict:
@@ -131,6 +148,12 @@ def json_row_values(item: dict) -> dict:
         f = JSON_KEYS.get(k)
         if f and f not in values and v not in (None, ""):
             values[f] = str(v)
+    # full team names beat 3-letter codes
+    for k in TEAM_PRIORITY:
+        v = flat.get(k)
+        if v not in (None, "") and not isinstance(v, (dict, list)):
+            values["team"] = str(v)
+            break
     # "goals"/"assists" can only be trusted when the row also looks like stats
     return values
 
@@ -252,6 +275,85 @@ def next_link(html: str, base: str) -> str | None:
     return urljoin(base, a["href"])
 
 
+OFFSET_PARAMS = ("offset", "start", "first", "skip")
+PAGE_PARAMS = ("page", "pagenumber", "page_number", "pageno")
+MAX_FEED_PAGES = 150
+
+
+def _feed_pages(feed_url: str):
+    """Yield URLs for the following pages of an offset/page-numbered feed."""
+    parts = urlsplit(feed_url)
+    q = parse_qsl(parts.query, keep_blank_values=True)
+    keys = {k.lower(): k for k, _ in q}
+    vals = dict(q)
+    size = None
+    for name in LIMIT_PARAMS:
+        if name in keys and vals[keys[name]].isdigit() and int(vals[keys[name]]) > 0:
+            size = (keys[name], int(vals[keys[name]]))
+            break
+    off = next((keys[n] for n in OFFSET_PARAMS if n in keys and vals[keys[n]].isdigit()), None)
+    pg = next((keys[n] for n in PAGE_PARAMS if n in keys and vals[keys[n]].isdigit()), None)
+    if off and size:
+        start = 0
+        step = size[1]
+        for i in range(MAX_FEED_PAGES):
+            yield urlunsplit(parts._replace(query=urlencode([(k, str(start + i * step) if k == off else v)
+                                                             for k, v in q])))
+    elif pg:
+        first = 0 if vals[pg] == "0" else 1
+        for i in range(MAX_FEED_PAGES):
+            yield urlunsplit(parts._replace(query=urlencode([(k, str(first + i) if k == pg else v)
+                                                             for k, v in q])))
+
+
+def page_through_feeds(page, feeds: list) -> list:
+    """Stats widgets load players 20-50 at a time as you scroll. Ask for every
+    page from inside the browser (so bot-protection cookies come along),
+    slowly, until a page comes back with no players."""
+    fetch_js = """async (u) => {
+        const r = await fetch(u, {credentials: 'include'});
+        return [r.status, await r.text()];
+    }"""
+    have = {u for u, _ in feeds}
+    extra = []
+    tried_bases = set()
+    for feed_url, data in list(feeds):
+        if not players_from_json(data, cfg={"name": "x"}, source_url=""):
+            continue
+        base = re.sub(r"(offset|start|first|skip|page\w*)=\d+", "", feed_url, flags=re.I)
+        if base in tried_bases:
+            continue
+        tried_bases.add(base)
+        misses = 0
+        for u in _feed_pages(feed_url):
+            if u in have:
+                continue
+            status, text = 0, ""
+            for attempt in range(3):
+                try:
+                    status, text = page.evaluate(fetch_js, u)
+                except Exception:
+                    status = 0
+                if status == 200:
+                    break
+                page.wait_for_timeout(3000 * (attempt + 1))
+            if status != 200:
+                log.debug("stopped paging %s at %s (status %s)", feed_url, u, status)
+                break
+            data = loads_loose(text)
+            if data is None or not players_from_json(data, cfg={"name": "x"}, source_url=""):
+                misses += 1
+                if misses >= 1:
+                    break
+                continue
+            have.add(u)
+            extra.append((u, data))
+            page.wait_for_timeout(1200)
+    if extra:
+        log.debug("pulled %d extra feed pages", len(extra))
+    return extra
+
+
 # what the last rendered page loaded, for --probe
 LAST_LOAD: dict = {"requests": [], "frames": []}
 
@@ -309,6 +411,7 @@ def load(url: str, render: bool) -> tuple[str, list[tuple[str, object]]]:
         except Exception:
             pass
         page.wait_for_timeout(2000)
+        feeds += page_through_feeds(page, feeds)
         html = page.content()
         frames = []
         # stats widgets often live in iframes

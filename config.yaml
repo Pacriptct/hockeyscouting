@@ -77,7 +77,7 @@ sources:
     league: EHL
     level: Tier II
     url: "https://gamesheetstats.com/seasons/15125/players"  # EHL embeds GameSheet; season id changes yearly
-    goalie_url: "https://easternhockeyleague.org/view/ehl-goalies/"
+    goalie_url: "https://gamesheetstats.com/seasons/15125/goalies"
     render: true
     enabled: true
   - name: NAHL
@@ -102,7 +102,7 @@ sources:
     league: EHLP
     level: Tier III
     url: "https://gamesheetstats.com/seasons/15290/players"  # EHLP on GameSheet
-    goalie_url: "https://easternhockeyleague.org/view/ehlp-goalies/"
+    goalie_url: "https://gamesheetstats.com/seasons/15290/goalies"
     render: true
     enabled: true
   - name: NA3HL
