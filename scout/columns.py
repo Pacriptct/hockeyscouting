@@ -77,6 +77,19 @@ def map_headers(headers: list[str], goalie_table: bool = False) -> dict[int, str
     return out
 
 
+def fix_case(name: str) -> str:
+    """VINCENZO CAPANO -> Vincenzo Capano, O'NEIL -> O'Neil, MCDONALD -> McDonald."""
+    def word(w: str) -> str:
+        out = []
+        for x in re.split(r"([-'])", w.lower()):
+            x = x.capitalize()
+            if re.match(r"^Mc[a-z]", x):
+                x = "Mc" + x[2:].capitalize()
+            out.append(x)
+        return "".join(out)
+    return " ".join(word(w) for w in name.split())
+
+
 def row_to_player(values: dict, *, team="", league="", level="Other",
                   source="", source_url="", goalie=False) -> Player | None:
     """values: field -> raw string."""
@@ -88,6 +101,11 @@ def row_to_player(values: dict, *, team="", league="", level="Other",
     name = re.sub(r"\s+", " ", name).strip(" *")
     if not name or name.lower() in {"totals", "total", "team totals"}:
         return None
+    if "," in name:  # "Last, First"
+        last, first = [x.strip() for x in name.split(",", 1)]
+        name = f"{first} {last}".strip()
+    if name.isupper() or name.islower():
+        name = fix_case(name)
 
     pos_raw = (values.get("pos_raw") or "").strip()
     if goalie and not pos_raw:

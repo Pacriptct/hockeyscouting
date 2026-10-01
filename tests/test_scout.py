@@ -192,3 +192,34 @@ def test_source_without_url_is_marked_setup(tmp_path):
     out = pipeline.run(cfg, today=date(2026, 10, 1), out_dir=tmp_path)
     s = out["sources"][0]
     assert s["setup"] and not s["ok"]
+
+
+def test_widen_leaves_signed_and_unlimited_urls_alone():
+    signed = "https://api.t.test/get_skaters?auth_key=k&league_id=1&limit=20&auth_signature=abc"
+    assert league_site.widen(signed) is None
+    assert league_site.widen("https://f.test/feed?limit=0") is None
+
+
+def test_name_case_fixed():
+    from scout.columns import row_to_player
+    assert row_to_player({"name": "VINCENZO CAPANO"}).name == "Vincenzo Capano"
+    assert row_to_player({"name": "RYAN O'NEIL-MCDONALD"}).name == "Ryan O'Neil-McDonald"
+    assert row_to_player({"name": "Smith, Joe"}).name == "Joe Smith"
+    assert row_to_player({"name": "Joe DeAngelo"}).name == "Joe DeAngelo"
+
+
+def test_hockeytech_roster_enrichment(monkeypatch):
+    calls = []
+
+    def fake_sitekit(base, view, **extra):
+        calls.append(view)
+        if view == "teamsbyseason":
+            return {"Teamsbyseason": [{"id": "7", "name": "Camrose Kodiaks", "code": "CAM"}]}
+        return {"Roster": [{"first_name": "Connor", "last_name": "Frost", "birthdate": "2006-04-04",
+                            "hometown": "Red Deer, AB", "shoots": "L"}, "junk"]}
+
+    monkeypatch.setattr(hockeytech, "_sitekit", fake_sitekit)
+    p = Player(name="Connor Frost", team="CAM")
+    hockeytech.enrich_from_rosters(
+        [p], "https://lscluster.hockeytech.com/feed/index.php?feed=statviewfeed&season=48&key=k&client_code=ajhl")
+    assert p.birth_year == 2006 and p.team == "Camrose Kodiaks" and p.hometown == "Red Deer, AB"

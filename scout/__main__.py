@@ -17,6 +17,7 @@ def main():
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(message)s")
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
 
     if args.probe:
         from .sources.league_site import probe

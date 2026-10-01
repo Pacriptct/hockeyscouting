@@ -112,7 +112,7 @@ def _looks_like_players(rows: list[dict], raw: list[dict] | None = None) -> bool
     return hits / min(len(rows), 30) >= 0.6
 
 
-def find_player_lists(data) -> list[list[dict]]:
+def find_player_lists(data, raw_out: list | None = None) -> list[list[dict]]:
     """Walk any JSON and return every list that looks like player rows."""
     found = []
 
@@ -125,6 +125,8 @@ def find_player_lists(data) -> list[list[dict]]:
                 rows = [json_row_values(x) for x in dicts]
                 if _looks_like_players(rows, dicts):
                     found.append(rows)
+                    if raw_out is not None:
+                        raw_out.append(dicts[0])
                     return
             for x in node:
                 walk(x, depth + 1)
@@ -169,10 +171,13 @@ def widen(url: str) -> str | None:
     """If a feed URL has a page-size param, ask for everything at once."""
     parts = urlsplit(url)
     q = parse_qsl(parts.query, keep_blank_values=True)
+    # signed URLs break if we touch them
+    if any(re.search(r"sig|signature|hash|token|md5", k, re.I) for k, _ in q):
+        return None
     changed = False
     new = []
     for k, v in q:
-        if k.lower() in LIMIT_PARAMS and v.isdigit() and int(v) < 1000:
+        if k.lower() in LIMIT_PARAMS and v.isdigit() and 0 < int(v) < 1000:
             new.append((k, "2000"))
             changed = True
         else:
@@ -240,7 +245,12 @@ def load(url: str, render: bool) -> tuple[str, list[tuple[str, object]]]:
         browser = p.chromium.launch(executable_path=os.environ.get("CHROMIUM_PATH") or None)
         page = browser.new_page(user_agent=http.UA, viewport={"width": 1400, "height": 1000})
         page.on("response", on_response)
-        page.goto(url, wait_until="networkidle", timeout=60000)
+        # some league sites never go quiet (ads, video) - read what's there
+        try:
+            page.goto(url, wait_until="networkidle", timeout=45000)
+        except Exception:
+            log.debug("%s never finished loading, reading it anyway", url)
+            page.wait_for_timeout(5000)
         # scroll down so lazy-loaded widgets / iframes actually load
         for _ in range(8):
             page.mouse.wheel(0, 2500)
@@ -292,6 +302,12 @@ def scrape_url(url: str, cfg: dict, goalie=False) -> list[Player]:
                         from_feed = more
                 except Exception as e:
                     log.debug("couldn't widen %s: %s", feed_url, e)
+            if "hockeytech.com" in feed_url:
+                from .hockeytech import enrich_from_rosters
+                try:
+                    enrich_from_rosters(from_feed, feed_url)
+                except Exception as e:
+                    log.debug("couldn't load HockeyTech rosters: %s", e)
             got += from_feed
 
         if not got and page_url != url:
@@ -380,6 +396,10 @@ def probe(url: str, render: bool = True) -> None:
                 print(f"    HockeyTech feed! client_code={q.get('client_code')} key={q.get('key')}")
             if widen(feed_url):
                 print("    (page size can be raised - full list will be pulled)")
+            raw = []
+            find_player_lists(data, raw)
+            if raw:
+                print("    first record: " + json.dumps(raw[0], default=str)[:700])
     print(f"  -> players read from feeds: {total_feed}\n")
 
     nxt = next_link(html, url)

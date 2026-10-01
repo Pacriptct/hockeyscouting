@@ -15,14 +15,15 @@ program:
 season: auto
 
 # Birth years we're recruiting, with how much each one counts (0-1).
-# Juniors age out at 21, so the oldest guys are the ones who need a home next
-# fall. Prep/18U guys are a year or two out.
+# Junior players have to be 20 or younger on Dec 31, so for 2026-27 the
+# oldest juniors are 2006s - their last year, they need a home next fall.
+# Bump every year by one each summer.
 birth_years:
-  2005: 1.0
   2006: 1.0
-  2007: 0.85
-  2008: 0.6
-  2009: 0.3
+  2007: 1.0
+  2008: 0.85
+  2009: 0.6
+  2010: 0.3
 
 # Anyone with a college commitment gets dropped, unless the commitment
 # mentions one of these (ACHA commits can still be flipped).
@@ -30,7 +31,7 @@ keep_if_committed_to:
   - ACHA
 
 min_games: 5        # need this many GP before we trust the numbers
-max_results: 1500   # cap on prospects kept in the dashboard
+max_results: 10000  # cap on prospects kept in the dashboard
 digest_size: 40     # how many new guys go in the daily email
 
 # How strong each level is. Production is ranked against the player's own

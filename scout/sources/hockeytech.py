@@ -106,3 +106,49 @@ def fetch(cfg: dict, ctx: dict) -> list[Player]:
             if p:
                 out.append(p)
     return out
+
+
+def _sitekit(params: dict, view: str, **extra):
+    r = http.get(FEED, params={**params, "feed": "modulekit", "view": view, **extra})
+    return _loads(r.text).get("SiteKit", {})
+
+
+def enrich_from_rosters(players: list[Player], feed_url: str) -> None:
+    """The stats feed on a lot of HockeyTech sites leaves out birthdates and
+    only gives team codes. Pull each team's roster and fill those in."""
+    from urllib.parse import parse_qsl, urlsplit
+
+    from ..models import norm_name, parse_birth_year
+
+    q = dict(parse_qsl(urlsplit(feed_url).query))
+    if not (q.get("key") and q.get("client_code") and q.get("season")):
+        return
+    if all(p.birth_year for p in players):
+        return
+    base = {"key": q["key"], "client_code": q["client_code"], "fmt": "json", "lang": "en"}
+    season = q["season"]
+    teams = _sitekit(base, "teamsbyseason", season_id=season).get("Teamsbyseason", [])
+    by_name: dict[str, dict] = {}
+    for t in teams:
+        tid = t.get("id") or t.get("team_id")
+        if not tid:
+            continue
+        team_name = t.get("name") or t.get("team_name") or ""
+        for r in _sitekit(base, "roster", season_id=season, team_id=tid).get("Roster", []):
+            if not isinstance(r, dict):
+                continue
+            name = r.get("name") or f"{r.get('first_name', '')} {r.get('last_name', '')}"
+            r = dict(r, _team=team_name, _code=t.get("code", ""))
+            by_name[norm_name(name)] = r
+    for p in players:
+        r = by_name.get(norm_name(p.name))
+        if not r:
+            continue
+        p.dob = p.dob or r.get("birthdate") or r.get("rawbirthdate") or ""
+        p.birth_year = p.birth_year or parse_birth_year(r.get("birthdate_year") or p.dob)
+        p.hometown = p.hometown or r.get("hometown") or r.get("birthplace") or ""
+        p.height = p.height or r.get("height") or r.get("height_hyphenated") or ""
+        p.weight = p.weight or str(r.get("weight") or "")
+        p.shoots = p.shoots or r.get("shoots") or r.get("catches") or ""
+        if r["_team"] and (not p.team or p.team == r["_code"] or len(p.team) <= 4):
+            p.team = r["_team"]

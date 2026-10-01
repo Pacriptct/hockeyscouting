@@ -122,7 +122,7 @@ def run(cfg: dict | None = None, today: date | None = None, out_dir: Path = DATA
         rows = [dict(d, new=False) for d in old.values()]
     else:
         rows = merge_history(players, old, today.isoformat())
-    rows = rows[: int(cfg.get("max_results", 1500))]
+    rows = rows[: int(cfg.get("max_results", 10000))]
 
     payload = {
         "generated": today.isoformat(),
@@ -133,5 +133,5 @@ def run(cfg: dict | None = None, today: date | None = None, out_dir: Path = DATA
         "sources": report,
         "players": rows,
     }
-    pfile.write_text(json.dumps(payload, indent=1))
+    pfile.write_text(json.dumps(payload, separators=(",", ":")))
     return payload
