@@ -198,43 +198,70 @@ def next_link(html: str, base: str) -> str | None:
     return urljoin(base, a["href"])
 
 
+# what the last rendered page loaded, for --probe
+LAST_LOAD: dict = {"requests": [], "frames": []}
+
+
 def load(url: str, render: bool) -> tuple[str, list[tuple[str, object]]]:
-    """Returns (html, [(feed_url, parsed_json), ...])."""
+    """Returns (html, [(feed_url, parsed_json), ...]).
+
+    HTML fragments loaded in the background (common on SportsEngine-style
+    sites, where the stats tab is fetched after the page loads) get appended
+    to the html so their tables are read too."""
     if not render:
         return http.get(url).text, []
 
     from playwright.sync_api import sync_playwright
 
     feeds: list[tuple[str, object]] = []
+    fragments: list[str] = []
+    requests_seen: list[tuple] = []
 
     def on_response(resp):
         try:
-            if resp.request.resource_type not in ("xhr", "fetch", "script", "document"):
-                return
+            rtype = resp.request.resource_type
             ctype = resp.headers.get("content-type", "")
+            if rtype in ("xhr", "fetch", "document", "script"):
+                requests_seen.append((rtype, resp.status, ctype.split(";")[0], resp.url))
+            if rtype not in ("xhr", "fetch", "script", "document"):
+                return
             if not any(t in ctype for t in ("json", "javascript", "text/plain", "text/html")):
                 return
-            data = loads_loose(resp.text())
+            text = resp.text()
+            data = loads_loose(text)
             if data is not None:
                 feeds.append((resp.url, data))
+            elif rtype in ("xhr", "fetch") and "<table" in text.lower():
+                fragments.append(text)
         except Exception:
             pass
 
     with sync_playwright() as p:
         browser = p.chromium.launch(executable_path=os.environ.get("CHROMIUM_PATH") or None)
-        page = browser.new_page(user_agent=http.UA)
+        page = browser.new_page(user_agent=http.UA, viewport={"width": 1400, "height": 1000})
         page.on("response", on_response)
         page.goto(url, wait_until="networkidle", timeout=60000)
-        page.wait_for_timeout(3000)
+        # scroll down so lazy-loaded widgets / iframes actually load
+        for _ in range(8):
+            page.mouse.wheel(0, 2500)
+            page.wait_for_timeout(500)
+        try:
+            page.wait_for_load_state("networkidle", timeout=15000)
+        except Exception:
+            pass
+        page.wait_for_timeout(2000)
         html = page.content()
+        frames = []
         # stats widgets often live in iframes
         for frame in page.frames[1:]:
+            frames.append(frame.url)
             try:
                 html += frame.content()
             except Exception:
                 pass
         browser.close()
-    return html, feeds
+    LAST_LOAD.update(requests=requests_seen, frames=frames)
+    return html + "".join(fragments), feeds
 
 
 def scrape_url(url: str, cfg: dict, goalie=False) -> list[Player]:
@@ -357,6 +384,29 @@ def probe(url: str, render: bool = True) -> None:
 
     nxt = next_link(html, url)
     print(f"Next page link: {nxt or 'none'}\n")
+
+    if render:
+        print(f"Embedded frames: {len(LAST_LOAD['frames'])}")
+        for f in LAST_LOAD["frames"]:
+            print(f"  {f[:200]}")
+        print()
+        reqs = [r for r in LAST_LOAD["requests"] if r[0] in ("xhr", "fetch", "document")]
+        print(f"Data requests the page made: {len(reqs)}")
+        for rtype, status, ctype, rurl in reqs[:60]:
+            print(f"  {rtype:<8} {status} {ctype:<24} {rurl[:170]}")
+        print()
+
+    links = []
+    for a in soup.find_all("a", href=True):
+        label = a.get_text(" ", strip=True)
+        if re.search(r"stat|leader|scor|skater|goalie|roster|player", label + " " + a["href"], re.I):
+            full = urljoin(url, a["href"])
+            if full not in [l[1] for l in links] and not full.startswith("javascript"):
+                links.append((label[:40], full))
+    print(f"Stats-looking links on the page: {len(links)}")
+    for label, full in links[:40]:
+        print(f"  {label:<40} {full[:160]}")
+    print()
 
     sample = best_per_player(from_tables + [p for f in feeds for p in players_from_json(f[1], cfg=cfg, source_url=url)])
     sample.sort(key=lambda p: (p.pts or 0), reverse=True)
