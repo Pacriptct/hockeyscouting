@@ -38,7 +38,7 @@ def build(payload: dict, size: int, site_url: str = "") -> tuple[str, str, str]:
             f"<td>{html.escape(p.get('league', ''))}</td><td>{_stat_line(p)}</td>"
             f"<td>{html.escape('; '.join(p.get('notes', [])))}</td></tr>"
         )
-    failed = [s for s in payload.get("sources", []) if not s["ok"]]
+    failed = [s for s in payload.get("sources", []) if not s["ok"] and not s.get("setup")]
     fail_txt = "".join(f"\n  - {s['name']}: {s['error']}" for s in failed)
     footer = f"\nDashboard: {site_url}\n" if site_url else ""
     text = (f"{len(new)} new prospects today ({payload['count']} total on the board).\n\n"

@@ -12,7 +12,7 @@ import yaml
 
 from .models import Player
 from .scoring import current_season, score_all
-from .sources import SOURCES
+from .sources import NEEDS_URL, SOURCES
 
 log = logging.getLogger("scout")
 
@@ -58,8 +58,11 @@ def collect(cfg: dict, ctx: dict) -> tuple[list[Player], list[dict]]:
         if not src.get("enabled", True):
             continue
         fn = SOURCES.get(src.get("type"))
-        entry = {"name": src["name"], "type": src.get("type"), "count": 0, "ok": False, "error": ""}
-        if not fn:
+        entry = {"name": src["name"], "type": src.get("type"), "count": 0, "ok": False, "error": "",
+                 "setup": False}
+        if src.get("type") in NEEDS_URL and not src.get("url"):
+            entry.update(setup=True, error="Needs a stats page URL in config.yaml")
+        elif not fn:
             entry["error"] = f"unknown source type {src.get('type')}"
         else:
             try:

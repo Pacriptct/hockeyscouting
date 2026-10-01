@@ -37,16 +37,3 @@ def get(url: str, *, params=None, tries: int = 3, timeout: int = 30) -> requests
             time.sleep(2 ** (i + 1))
     raise last
 
-
-def render(url: str, wait_ms: int = 4000) -> str:
-    """Load a page in headless Chromium and return the HTML after JS runs."""
-    from playwright.sync_api import sync_playwright
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(user_agent=UA)
-        page.goto(url, wait_until="networkidle", timeout=60000)
-        page.wait_for_timeout(wait_ms)
-        html = page.content()
-        browser.close()
-    return html

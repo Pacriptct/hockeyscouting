@@ -36,101 +36,252 @@ digest_size: 40     # how many new guys go in the daily email
 # How strong each level is. Production is ranked against the player's own
 # league, then multiplied by this.
 level_weights:
-  "Tier II": 1.0
-  "Canadian Jr A": 0.95
-  "Tier III Top": 0.8
-  "Prep": 0.75
-  "Tier III": 0.65
+  "Tier I": 1.0
+  "Tier II": 0.95
+  "Canadian Jr A": 0.9
+  "Tier III": 0.7
+  "Prep": 0.7
   "18U AAA": 0.65
-  "Tier III Dev": 0.45
+  "Tier III Dev": 0.5
   "Other": 0.5
 
+# Every league we pull from. Each one points at the league's own stats page.
+#
+#   url        the league's skater stats page (or a list of pages, e.g. one
+#              per division). Blank = shows as "Needs URL" on the Sources tab.
+#   goalie_url separate goalie stats page, if the site splits them
+#   render     true = load it in a real browser first. Needed for most league
+#              sites since the stats are filled in by JavaScript. Leave on.
+#
+# To find a URL: go to the league's website, open the full player stats
+# (not just top 10 leaders), copy the address. Then test it with the
+# "Probe a stats page" action on GitHub before adding it here. Stats URLs on
+# SportsEngine / GameSheet sites change every season, so expect to update
+# them each fall.
 sources:
-  # ---------------------------------------------------------------- Elite Prospects
-  # Uses the official EP API (needs a key: https://www.eliteprospects.com/api).
-  # Put the key in the EP_API_KEY repo secret. Without it these get skipped,
-  # so dump EP lists in imports/ as CSV instead (see README).
-  - name: EP - NAHL
-    type: eliteprospects
-    league: nahl
-    level: Tier II
-    enabled: true
-  - name: EP - USPHL NCDC
-    type: eliteprospects
-    league: ncdc
-    level: Tier II
-    enabled: true
-  - name: EP - EHL
-    type: eliteprospects
-    league: ehl
-    level: Tier III Top
-    enabled: true
-  - name: EP - EHLP
-    type: eliteprospects
-    league: ehlp
-    level: Tier III
-    enabled: true
-  - name: EP - USPHL Premier
-    type: eliteprospects
-    league: usphl-premier
-    level: Tier III
-    enabled: true
-  - name: EP - NA3HL
-    type: eliteprospects
-    league: na3hl
-    level: Tier III Top
-    enabled: true
-  - name: EP - USHS Prep
-    type: eliteprospects
-    league: ushs-prep
-    level: Prep
-    enabled: true
-  - name: EP - 18U AAA
-    type: eliteprospects
-    league: 18u-aaa
-    level: 18U AAA
-    enabled: true
 
-  # ---------------------------------------------------------------- League sites
-  # Plain stats pages. Point `url` at the league's skater stats page (and
-  # `goalie_url` at the goalie page if it's separate). Set `render: true` if
-  # the table only shows up after JavaScript runs.
-  - name: EHL
-    type: html_table
-    url: https://www.ehlhockey.com/stats/player-stats
-    league: EHL
-    level: Tier III Top
-    render: true
-    enabled: true
-  - name: EHL Premier
-    type: html_table
-    url: https://www.ehlhockey.com/stats/player-stats?division=premier
-    league: EHLP
-    level: Tier III
+  # ---------------------------------------------------------------- Tier I
+  - name: USHL
+    type: league_site
+    league: USHL
+    level: Tier I
+    url: ""
     render: true
     enabled: false
 
-  # HockeyTech-powered leagues (the stats pages say "powered by HockeyTech" or
-  # load from lscluster.hockeytech.com). To get the key + client code: open the
-  # league's stats page, view source / network tab, search for "key=" and
-  # "client_code=".
+  # ---------------------------------------------------------------- Tier II
+  - name: EHL
+    type: league_site
+    league: EHL
+    level: Tier II
+    url: https://www.easternhockeyleague.org/stats/division_instance/343728
+    render: true
+    enabled: true
   - name: NAHL
-    type: hockeytech
+    type: league_site
     league: NAHL
     level: Tier II
-    client_code: nahl
-    key: ""
-    enabled: false
+    url: ""
+    render: true
+    enabled: true
+  - name: USPHL NCDC
+    type: league_site
+    league: USPHL NCDC
+    level: Tier II
+    url: https://usphl.com/ncdc/league-hub/
+    render: true
+    enabled: true
+
+  # ---------------------------------------------------------------- Tier III
+  - name: EHLP
+    type: league_site
+    league: EHLP
+    level: Tier III
+    url: ""
+    render: true
+    enabled: true
+  - name: NA3HL
+    type: league_site
+    league: NA3HL
+    level: Tier III
+    url: ""
+    render: true
+    enabled: true
+  - name: USPHL Premier
+    type: league_site
+    league: USPHL Premier
+    level: Tier III
+    url: https://usphl.com/premier/league-hub/
+    render: true
+    enabled: true
+
+  # ---------------------------------------------------------------- Tier III Dev
+  - name: USPHL Elite
+    type: league_site
+    league: USPHL Elite
+    level: Tier III Dev
+    url: https://usphl.com/elite/league-hub/
+    render: true
+    enabled: true
+
+  # ---------------------------------------------------------------- 18U AAA
+  - name: AYHL 18U
+    type: league_site
+    league: AYHL 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: BEAST 18U
+    type: league_site
+    league: BEAST 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: CSDHL 18U
+    type: league_site
+    league: CSDHL 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: ECEL 18U
+    type: league_site
+    league: ECEL 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: EJEPL 18U
+    type: league_site
+    league: EJEPL 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: MNHP 18U
+    type: league_site
+    league: MNHP 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: NAPHL 18U
+    type: league_site
+    league: NAPHL 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: NAT1HL 18U
+    type: league_site
+    league: NAT1HL 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: T1EHL 18U
+    type: league_site
+    league: T1EHL 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: THF 18U
+    type: league_site
+    league: THF 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+  - name: UT1HL 18U
+    type: league_site
+    league: UT1HL 18U
+    level: 18U AAA
+    url: ""
+    render: true
+    enabled: true
+
+  # ---------------------------------------------------------------- Canadian Jr A
   - name: CCHL
-    type: hockeytech
+    type: league_site
     league: CCHL
     level: Canadian Jr A
-    client_code: cchl
-    key: ""
-    enabled: false
+    url: ""
+    render: true
+    enabled: true
+  - name: OJHL
+    type: league_site
+    league: OJHL
+    level: Canadian Jr A
+    url: ""
+    render: true
+    enabled: true
+  - name: NOJHL
+    type: league_site
+    league: NOJHL
+    level: Canadian Jr A
+    url: ""
+    render: true
+    enabled: true
+  - name: BCHL
+    type: league_site
+    league: BCHL
+    level: Canadian Jr A
+    url: ""
+    render: true
+    enabled: true
+  - name: AJHL
+    type: league_site
+    league: AJHL
+    level: Canadian Jr A
+    url: ""
+    render: true
+    enabled: true
+  - name: SJHL
+    type: league_site
+    league: SJHL
+    level: Canadian Jr A
+    url: ""
+    render: true
+    enabled: true
+  - name: MJHL
+    type: league_site
+    league: MJHL
+    level: Canadian Jr A
+    url: ""
+    render: true
+    enabled: true
+  - name: MJAHL
+    type: league_site
+    league: MJAHL
+    level: Canadian Jr A
+    url: ""
+    render: true
+    enabled: true
+  - name: QJHL
+    type: league_site
+    league: QJHL
+    level: Canadian Jr A
+    url: ""
+    render: true
+    enabled: true
+
+  # ---------------------------------------------------------------- HockeyTech
+  # Some leagues (USHL, several Canadian Jr A leagues) run their stats on
+  # HockeyTech. If Probe shows feeds from lscluster.hockeytech.com you can use
+  # this instead, which is faster and pulls the whole league at once. Get the
+  # key + client_code from the feed URL Probe prints.
+  # - name: USHL
+  #   type: hockeytech
+  #   league: USHL
+  #   level: Tier I
+  #   client_code: ushl
+  #   key: ""
 
   # ---------------------------------------------------------------- Manual lists
-  # Any CSV dropped in imports/ gets pulled in (EP exports, showcase lists,
+  # Any CSV dropped in imports/ gets pulled in (prep rosters, showcase lists,
   # lists coaches send over, etc).
   - name: Imports
     type: csv_folder

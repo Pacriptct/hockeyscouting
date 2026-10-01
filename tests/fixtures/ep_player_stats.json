@@ -1,6 +1,0 @@
-{"_meta":{"totalRecords":2},"data":[
- {"player":{"id":900,"name":"Luke Prepper","firstName":"Luke","lastName":"Prepper","dateOfBirth":"2007-02-11","yearOfBirth":2007,"position":"C","shoots":"L","height":{"imperial":"6'0\""},"weight":{"imperial":"180"},"placeOfBirth":"Columbus, OH, USA","nationality":{"name":"USA"},"links":{"eliteprospectsUrl":"https://www.eliteprospects.com/player/900/luke-prepper"}},
-  "team":{"name":"Culver Military Academy"},"league":{"name":"USHS-Prep"},"regularStats":{"GP":25,"G":14,"A":16,"PTS":30,"PIM":8,"PM":11}},
- {"player":{"id":901,"name":"Gone Committed","yearOfBirth":2006,"position":"D","commitment":"Adrian College (NCAA)"},
-  "team":{"name":"Culver Military Academy"},"league":{"name":"USHS-Prep"},"regularStats":{"GP":25,"G":3,"A":10,"PTS":13}}
-]}

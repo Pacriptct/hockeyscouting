@@ -1,4 +1,5 @@
-"""python -m scout [--email] [--verbose]"""
+"""python -m scout [--email] [--only NAME] [-v]
+python -m scout --probe URL [--no-render]"""
 
 import argparse
 import logging
@@ -11,9 +12,16 @@ def main():
     ap = argparse.ArgumentParser(description="Pull prospects from every source and update the dashboard")
     ap.add_argument("--email", action="store_true", help="send the daily digest email after the run")
     ap.add_argument("--only", help="only run sources whose name contains this")
+    ap.add_argument("--probe", metavar="URL", help="show what can be read from a stats page, then exit")
+    ap.add_argument("--no-render", action="store_true", help="with --probe: don't run the page's JavaScript")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(message)s")
+
+    if args.probe:
+        from .sources.league_site import probe
+        probe(args.probe, render=not args.no_render)
+        return
 
     cfg = load_config()
     if args.only:

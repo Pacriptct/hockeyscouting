@@ -1,0 +1,41 @@
+name: Probe a stats page
+
+# Actions tab -> "Probe a stats page" -> Run workflow -> paste a league stats
+# URL. The log shows what tables / data feeds / players it can read, so you
+# know the URL works before putting it in config.yaml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: League stats page URL
+        required: true
+      render:
+        description: Load the page in a real browser (leave on for most sites)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Probe
+        env:
+          URL: ${{ inputs.url }}
+        run: |
+          if [ "${{ inputs.render }}" = "true" ]; then
+            python -m scout --probe "$URL"
+          else
+            python -m scout --probe "$URL" --no-render
+          fi

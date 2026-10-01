@@ -6,7 +6,7 @@ from scout import pipeline
 from scout.columns import map_headers
 from scout.models import Player
 from scout.scoring import current_season, score_all
-from scout.sources import csv_folder, eliteprospects, hockeytech, html_table
+from scout.sources import csv_folder, hockeytech, html_table, league_site
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -56,16 +56,6 @@ def test_hockeytech_season_pick():
                {"season_id": "69", "season_name": "2026-27 Pre-Season", "playoff": "0"},
                {"season_id": "68", "season_name": "2026-27 Regular Season", "playoff": "0"}]
     assert hockeytech.pick_season(seasons) == "68"
-
-
-def test_eliteprospects_items():
-    body = json.loads((FIX / "ep_player_stats.json").read_text())
-    cfg = {"name": "EP - Prep", "league": "ushs-prep", "level": "Prep"}
-    ps = [eliteprospects.item_to_player(i, cfg) for i in body["data"]]
-    luke = ps[0]
-    assert luke.birth_year == 2007 and luke.pts == 30 and luke.height == "6'0\""
-    assert luke.profile_url.endswith("luke-prepper")
-    assert ps[1].committed == "Adrian College (NCAA)"
 
 
 def test_csv_import(tmp_path):
@@ -138,3 +128,67 @@ def test_digest_lists_only_new():
     subject, text, body = digest.build(payload, 10, "https://example.test/")
     assert subject.startswith("1 new") and "A B" in text and "C D" not in text
     assert "boom" in text and "example.test" in body
+
+
+def test_feed_detection_nested_and_jsonp():
+    text = """cb({"payload": {"players": [
+      {"player": {"firstName": "Joe", "lastName": "Smith", "birthDate": "2005-02-01", "position": "C"},
+       "team": {"name": "Rochester Jr Americans"}, "stats": {"gamesPlayed": 10, "goals": 5, "assists": 7, "points": 12}},
+      {"player": {"firstName": "Al", "lastName": "Jones", "birthDate": "2006-05-05", "position": "D"},
+       "team": {"name": "Rochester Jr Americans"}, "stats": {"gamesPlayed": 10, "goals": 1, "assists": 3, "points": 4}},
+      {"player": {"firstName": "Gus", "lastName": "Net", "birthDate": "2006-01-01", "position": "G"},
+       "team": {"name": "Rochester Jr Americans"}, "stats": {"gamesPlayed": 8, "goalsAgainstAverage": 2.5, "savePercentage": 0.915}}
+    ], "meta": {"count": 3}}});"""
+    data = league_site.loads_loose(text)
+    ps = league_site.players_from_json(data, cfg={"name": "X", "league": "EHL", "level": "Tier II"},
+                                       source_url="u")
+    joe, al, gus = ps
+    assert joe.name == "Joe Smith" and joe.team == "Rochester Jr Americans"
+    assert (joe.gp, joe.g, joe.a, joe.pts, joe.birth_year) == (10, 5, 7, 12, 2005)
+    assert al.position == "D"
+    assert gus.is_goalie and gus.sv_pct == 0.915 and gus.pts is None
+
+
+def test_feed_detection_hockeytech_shape():
+    data = hockeytech._loads((FIX / "hockeytech_players.json").read_text())
+    rows = [{"row": {"name": f"P{i}", "games_played": "5", "points": str(i)}} for i in range(3)]
+    ps = league_site.players_from_json(data + [{"sections": [{"data": rows}]}],
+                                       cfg={"name": "X"}, source_url="u")
+    names = {p.name for p in ps}
+    assert {"Alex Carter", "Ben Diaz", "P0"} <= names
+
+
+def test_non_player_json_ignored():
+    data = {"teams": [{"name": "A", "wins": 3}, {"name": "B", "wins": 2}, {"name": "C", "wins": 1}],
+            "news": [{"title": "x"}] * 5}
+    assert league_site.players_from_json(data, cfg={"name": "X"}, source_url="u") == []
+
+
+def test_widen_and_next_link():
+    assert "limit=2000" in league_site.widen("https://f.test/feed?view=players&limit=20&key=k")
+    assert league_site.widen("https://f.test/feed?view=players") is None
+    html = '<a href="?page=1">1</a><a href="?page=2">Next</a>'
+    assert league_site.next_link(html, "https://l.test/stats") == "https://l.test/stats?page=2"
+    assert league_site.next_link('<a href="#">Next</a>', "https://l.test/") is None
+
+
+def test_league_site_follows_pages(monkeypatch):
+    page1 = (FIX / "skaters.html").read_text().replace("</body>", '<a href="/stats?page=2">Next »</a></body>')
+    page1 = page1.replace('Next »', 'Next')
+    page2 = """<table><tr><th>Player</th><th>Team</th><th>GP</th><th>PTS</th></tr>
+               <tr><td>Page Two</td><td>T</td><td>9</td><td>9</td></tr>
+               <tr><td>Jake Miller</td><td>T</td><td>21</td><td>36</td></tr></table>"""
+    pages = {"https://l.test/stats": page1, "https://l.test/stats?page=2": page2}
+    monkeypatch.setattr(league_site, "load", lambda url, render: (pages[url], []))
+    ps = league_site.fetch({"name": "EHL", "url": "https://l.test/stats", "league": "EHL"}, {})
+    names = [p.name for p in ps]
+    assert "Page Two" in names
+    assert names.count("Jake Miller") == 1
+    assert next(p for p in ps if p.name == "Jake Miller").gp == 21
+
+
+def test_source_without_url_is_marked_setup(tmp_path):
+    cfg = dict(CFG, sources=[{"name": "NAHL", "type": "league_site", "url": ""}])
+    out = pipeline.run(cfg, today=date(2026, 10, 1), out_dir=tmp_path)
+    s = out["sources"][0]
+    assert s["setup"] and not s["ok"]

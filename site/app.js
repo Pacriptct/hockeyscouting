@@ -227,7 +227,8 @@ function renderPipeline() {
 function renderSources() {
   $("#sources-body").innerHTML = (DATA.sources || []).map((s) =>
     `<tr><td>${esc(s.name)}</td><td>${esc(s.type)}</td><td>${s.count}</td>
-     <td>${s.ok ? '<span class="ok">OK</span>' : `<span class="bad">Failed</span> <span class="sub">${esc(s.error)}</span>`}</td></tr>`).join("")
+     <td>${s.ok ? '<span class="ok">OK</span>' : s.setup ? '<span class="muted">Needs URL</span>'
+       : `<span class="bad">Failed</span> <span class="sub">${esc(s.error)}</span>`}</td></tr>`).join("")
     || '<tr><td colspan="4" class="muted">No run yet.</td></tr>';
 }
 
@@ -306,7 +307,7 @@ async function init() {
     DATA = await r.json();
   } catch {}
   if (DATA.generated) {
-    const failed = (DATA.sources || []).filter((s) => !s.ok).length;
+    const failed = (DATA.sources || []).filter((s) => !s.ok && !s.setup).length;
     $("#meta").textContent = `Updated ${DATA.generated} · ${DATA.season} season · ${DATA.count} prospects · ${DATA.new_count} new today` +
       (failed ? ` · ${failed} source${failed > 1 ? "s" : ""} failed` : "");
   } else {

@@ -1,8 +1,8 @@
 # Wittenberg Hockey Recruiting
 
 Recruiting board for Wittenberg men's hockey (ACHA D2, moving to NCAA D3).
-Every morning it pulls players from Elite Prospects and league stats sites
-(EHL, NAHL, NA3HL, USPHL, prep, 18U AAA...), ranks them, puts them on a
+Every morning it pulls players straight from the league websites (EHL,
+NAHL, NCDC, NA3HL, USPHL, 18U AAA leagues, Canadian Jr A...), ranks them, puts them on a
 dashboard and emails a list of the new names. From the dashboard I check
 each guy out, mark him, and copy a ready-to-send email or DM.
 
@@ -48,47 +48,63 @@ backup* now and then, and *Restore backup* to move them to another device.
 
    | Secret | What |
    |---|---|
-   | `EP_API_KEY` | Elite Prospects API key (optional, see below) |
    | `SMTP_HOST` | `smtp.gmail.com` |
    | `SMTP_PORT` | `587` |
    | `SMTP_USER` | your Gmail address |
    | `SMTP_PASS` | a Gmail **app password** (Google account → Security → App passwords) |
    | `DIGEST_TO` | where the daily email goes (comma-separate for more than one) |
 
-3. **Run it**: Actions tab → *Daily prospect pull* → *Run workflow*. After
-   that it runs every morning on its own.
+3. **Fill in league URLs** (see below), then **run it**: Actions tab →
+   *Daily prospect pull* → *Run workflow*. After that it runs every morning
+   on its own.
 4. Fill in coach name/email/phone in `config.yaml` (or in the dashboard's
    Templates tab).
 
 ## Sources
 
-All in `config.yaml`. Each has `enabled: true/false`. If one site is down or
-changes its layout, that source fails on its own and shows up red on the
-**Sources** tab and in the email; everything else still runs.
+Every league is listed in `config.yaml` with its level (Tier I/II/III,
+18U AAA, Canadian Jr A). Each one just needs the URL of that league's
+**full player stats page**. Leagues without a URL show as *Needs URL* on
+the Sources tab; leagues whose URL broke show as *Failed* there and in the
+email. Everything else keeps running either way.
 
-- **`eliteprospects`**: official EP API. EP doesn't allow scraping their
-  site, so this needs an API key. `league` is the slug from the EP URL
-  (`eliteprospects.com/league/<slug>`), double check these against EP.
-  No key? Skip it and use CSV exports (below).
-- **`html_table`**: any league page that shows stats in a table (EHL,
-  USPHL, NA3HL, prep leagues, 18U leagues...). Set `url` to the stats page
-  (or a list of URLs, e.g. one per division), `goalie_url` for goalies, and
-  `render: true` if the table only appears after the page's JavaScript runs.
-- **`hockeytech`**: leagues on HockeyTech (lscluster.hockeytech.com). Needs
-  the league's public `key` and `client_code`, found by opening the league's
-  stats page, viewing source / network tab and searching for `key=`.
-- **`csv_folder`**: every CSV in `imports/`. Good for EP exports, showcase
-  rosters, lists from other coaches. See `imports/README.md`.
+The scraper loads the page in a real browser and reads players from:
+- any stats table on the page
+- the data the page loads in the background (how most JavaScript stats
+  widgets work: HockeyTech, GameSheet, etc.), asking for the full list
+  instead of one page at a time when it can
+- "Next" page links
 
-### Adding a league
+### Adding / fixing a league URL
 
-Copy a block in `config.yaml`, change the name/url/league/level, push. To
-test just that source locally:
+1. Go to the league's site and open the full player stats (all players,
+   not the top-10 leaders box). Copy the address.
+2. Actions tab → **Probe a stats page** → *Run workflow* → paste the URL.
+3. Open the run's log. It lists the tables and data feeds it found and a
+   sample of players. If the sample looks right, the URL works.
+4. Put the URL in `config.yaml` under that league and push.
+
+If the league has separate skater and goalie pages, use `url` for skaters
+and `goalie_url` for goalies. Divisions on separate pages: make `url` a
+list. SportsEngine / GameSheet stats URLs change every season, so redo this
+each fall.
+
+If Probe says **HockeyTech feed!** with a `client_code` and `key`, you
+can switch that league to `type: hockeytech` (example in `config.yaml`),
+which pulls the whole league in one request.
+
+### Other sources
+
+- **`csv_folder`**: every CSV in `imports/`. Use it for prep rosters,
+  showcase lists, lists from other coaches. See `imports/README.md`.
+
+Locally:
 
 ```
 pip install -r requirements-dev.txt
 python -m playwright install chromium
-python -m scout --only "EHL" -v
+python -m scout --probe "https://league-site/stats"   # test a URL
+python -m scout --only "EHL" -v                       # run one league
 ```
 
 ## Tuning

@@ -1,15 +1,4 @@
-"""Scrape any stats page that shows players in an HTML table.
-
-Works on most league sites as long as the stats are in a <table>. If the
-table is built by JavaScript, set `render: true` and the page gets loaded in
-a headless browser first.
-
-Config:
-  url:        one URL or a list (e.g. one per page / division / team)
-  goalie_url: optional, same thing for goalie stats
-  render:     true to run JavaScript before parsing
-  league / level / team: filled in when the table doesn't have them
-"""
+"""Pull player rows out of any HTML stats table on a page."""
 
 from __future__ import annotations
 
@@ -17,21 +6,8 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from .. import http
 from ..columns import map_headers, row_to_player
 from ..models import Player
-
-
-def _as_list(v) -> list[str]:
-    if not v:
-        return []
-    return v if isinstance(v, list) else [v]
-
-
-def fetch_html(url: str, render: bool) -> str:
-    if render:
-        return http.render(url)
-    return http.get(url).text
 
 
 def _header_cells(table) -> list[str]:
@@ -86,15 +62,3 @@ def parse_tables(html: str, *, base_url: str = "", league="", level="Other",
                     p.profile_url = link
                 players.append(p)
     return players
-
-
-def fetch(cfg: dict, ctx: dict) -> list[Player]:
-    out: list[Player] = []
-    render = bool(cfg.get("render"))
-    common = dict(league=cfg.get("league", ""), level=cfg.get("level", "Other"),
-                  team=cfg.get("team", ""), source=cfg["name"])
-    for url in _as_list(cfg.get("url")):
-        out += parse_tables(fetch_html(url, render), base_url=url, **common)
-    for url in _as_list(cfg.get("goalie_url")):
-        out += parse_tables(fetch_html(url, render), base_url=url, force_goalie=True, **common)
-    return out

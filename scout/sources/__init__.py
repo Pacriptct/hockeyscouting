@@ -1,8 +1,11 @@
-from . import csv_folder, eliteprospects, hockeytech, html_table
+from . import csv_folder, hockeytech, league_site
 
 SOURCES = {
-    "html_table": html_table.fetch,
+    "league_site": league_site.fetch,
+    "html_table": league_site.fetch,
     "hockeytech": hockeytech.fetch,
-    "eliteprospects": eliteprospects.fetch,
     "csv_folder": csv_folder.fetch,
 }
+
+# source types that need a `url` before they can run
+NEEDS_URL = {"league_site", "html_table"}
