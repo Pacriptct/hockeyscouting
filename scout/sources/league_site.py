@@ -256,6 +256,8 @@ def widen(url: str) -> str | None:
         if k.lower() in LIMIT_PARAMS and v.isdigit() and 0 < int(v) < 1000:
             new.append((k, "2000"))
             changed = True
+        elif k.lower() in OFFSET_PARAMS and v.isdigit():
+            new.append((k, "0"))  # widened request should start from the top
         else:
             new.append((k, v))
     if not changed:
@@ -434,39 +436,44 @@ def load(url: str, render: bool) -> tuple[str, list[tuple[str, object]]]:
 
 
 GAMESHEET_SEASON = re.compile(r"gamesheetstats\.com/seasons/(\d+)")
-GAMESHEET_GATEWAY = "https://gateway.gamesheet.io/stats/{kind}"
+GAMESHEET_API = "https://gamesheetstats.com/api/{kind}/standings/{season}"
 
 
 def gamesheet_direct(url: str, cfg: dict, goalie: bool) -> list[Player]:
-    """GameSheet stats pages load 20 players at a time behind bot protection,
-    but GameSheet's gateway (what league sites like nahl.com use) returns the
-    whole season in one request."""
+    """GameSheet stats pages show 20 players at a time behind bot protection,
+    but the API behind them answers plain requests and will hand over a
+    whole season at once."""
     m = GAMESHEET_SEASON.search(url)
     if not m:
         return []
     season = m.group(1)
-    headers = {"Origin": "https://gamesheetstats.com", "Referer": "https://gamesheetstats.com/",
+    kind = "goalies" if goalie else "players"
+    sort = "gaa" if goalie else "-pts"
+    headers = {"Referer": f"https://gamesheetstats.com/seasons/{season}/{kind}",
                "Accept": "application/json"}
-    kinds = ["goalies", "players"] if goalie else ["players"]
-    for kind in kinds:
-        params = {"filter[seasons]": season, "filter[teams]": "", "filter[qualified-goalies]": "true"}
+    out: list[Player] = []
+    offset, limit = 0, 500
+    for _ in range(40):
         try:
-            r = http.session().get(GAMESHEET_GATEWAY.format(kind=kind), params=params,
+            r = http.session().get(GAMESHEET_API.format(kind=kind, season=season),
+                                   params={"limit": limit, "offset": offset, "sort": sort},
                                    headers=headers, timeout=30)
         except Exception as e:
-            log.debug("GameSheet gateway %s failed: %s", kind, e)
-            continue
+            log.info("  GameSheet API failed: %s", e)
+            break
         if r.status_code != 200:
-            log.debug("GameSheet gateway %s -> %s", kind, r.status_code)
-            continue
-        ps = players_from_json(loads_loose(r.text), cfg=cfg, source_url=url,
-                              goalie_hint=goalie and kind == "goalies")
-        if goalie:
-            ps = [p for p in ps if p.is_goalie or kind == "goalies"]
-        if ps:
-            log.info("  GameSheet season %s: %d %s in one request", season, len(ps), kind)
-            return ps
-    return []
+            log.info("  GameSheet API -> %s, falling back to the browser", r.status_code)
+            break
+        ps = players_from_json(loads_loose(r.text), cfg=cfg, source_url=url, goalie_hint=goalie)
+        if not ps:
+            break
+        out += ps
+        if len(ps) < limit:
+            break
+        offset += limit
+    if out:
+        log.info("  GameSheet season %s: %d %s", season, len(out), kind)
+    return out
 
 
 def scrape_url(url: str, cfg: dict, goalie=False) -> list[Player]:

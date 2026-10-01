@@ -166,6 +166,7 @@ def test_non_player_json_ignored():
 
 def test_widen_and_next_link():
     assert "limit=2000" in league_site.widen("https://f.test/feed?view=players&limit=20&key=k")
+    assert "offset=0" in league_site.widen("https://f.test/feed?limit=20&offset=20")
     assert league_site.widen("https://f.test/feed?view=players") is None
     html = '<a href="?page=1">1</a><a href="?page=2">Next</a>'
     assert league_site.next_link(html, "https://l.test/stats") == "https://l.test/stats?page=2"
@@ -282,26 +283,25 @@ def test_unknown_position_codes_stay_blank():
 
 
 def test_gamesheet_direct(monkeypatch):
-    nahl_like = {"status": "success", "data": [
-        {"firstName": "VINCENZO", "lastName": "CAPANO", "birthdate": "2006-06-20", "committed": True,
-         "stats": {"a": 11, "g": 4, "gp": 7, "pts": 15}, "teams": [{"id": 1, "title": "Team A"}]},
-        {"firstName": "JOE", "lastName": "OPEN", "birthdate": "2007-01-01", "committed": False,
-         "stats": {"a": 1, "g": 1, "gp": 7, "pts": 2}, "teams": [{"id": 1, "title": "Team A"}]}]}
-    seen = {}
-
-    class R:
-        status_code = 200
-        text = json.dumps(nahl_like)
+    def rec(i):
+        return {"firstName": f"P{chr(65 + i % 26)}{chr(65 + i // 26)}", "lastName": "SMITH",
+                "birthdate": "2006-06-20", "positions": ["forward"],
+                "stats": {"a": 1, "g": 1, "gp": 7, "pts": 2}, "teams": [{"id": 1, "title": "Team A"}]}
+    calls = []
 
     class S:
         def get(self, url, params=None, headers=None, timeout=None):
-            seen["url"], seen["params"] = url, params
+            calls.append((url, dict(params)))
+            off, lim = params["offset"], params["limit"]
+
+            class R:
+                status_code = 200
+                text = json.dumps({"data": [rec(i) for i in range(off, min(off + lim, 620))]})
             return R()
 
     monkeypatch.setattr(league_site.http, "session", lambda: S())
     ps = league_site.fetch({"name": "EHL", "url": "https://gamesheetstats.com/seasons/15125/players"}, {})
-    assert seen["url"].endswith("/stats/players") and seen["params"]["filter[seasons]"] == "15125"
-    assert {p.name for p in ps} == {"Vincenzo Capano", "Joe Open"}
-    capano = next(p for p in ps if p.name == "Vincenzo Capano")
-    assert capano.committed == "True" and capano.team == "Team A" and capano.g == 4
-    assert [p.name for p in score_all(ps, CFG)] == ["Joe Open"]
+    assert len(ps) == 620
+    assert calls[0][0] == "https://gamesheetstats.com/api/players/standings/15125"
+    assert calls[0][1]["offset"] == 0 and calls[1][1]["offset"] == 500
+    assert ps[0].team == "Team A" and ps[0].position == "F"
