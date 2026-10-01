@@ -1,0 +1,139 @@
+# Wittenberg Hockey recruiting scout config
+#
+# Every source below gets pulled on the daily run. Turn a source off with
+# `enabled: false`. A source that fails gets logged and skipped, so one broken
+# site never kills the whole run.
+
+program:
+  name: Wittenberg University Men's Hockey
+  level: ACHA D2 (moving to NCAA D3)
+  coach_name: ""          # shows up in the email/DM templates
+  coach_email: ""
+  coach_phone: ""
+
+# "auto" means the current season from today's date (Aug+ = new season).
+season: auto
+
+# Birth years we're recruiting, with how much each one counts (0-1).
+# Juniors age out at 21, so the oldest guys are the ones who need a home next
+# fall. Prep/18U guys are a year or two out.
+birth_years:
+  2005: 1.0
+  2006: 1.0
+  2007: 0.85
+  2008: 0.6
+  2009: 0.3
+
+# Anyone with a college commitment gets dropped, unless the commitment
+# mentions one of these (ACHA commits can still be flipped).
+keep_if_committed_to:
+  - ACHA
+
+min_games: 5        # need this many GP before we trust the numbers
+max_results: 1500   # cap on prospects kept in the dashboard
+digest_size: 40     # how many new guys go in the daily email
+
+# How strong each level is. Production is ranked against the player's own
+# league, then multiplied by this.
+level_weights:
+  "Tier II": 1.0
+  "Canadian Jr A": 0.95
+  "Tier III Top": 0.8
+  "Prep": 0.75
+  "Tier III": 0.65
+  "18U AAA": 0.65
+  "Tier III Dev": 0.45
+  "Other": 0.5
+
+sources:
+  # ---------------------------------------------------------------- Elite Prospects
+  # Uses the official EP API (needs a key: https://www.eliteprospects.com/api).
+  # Put the key in the EP_API_KEY repo secret. Without it these get skipped,
+  # so dump EP lists in imports/ as CSV instead (see README).
+  - name: EP - NAHL
+    type: eliteprospects
+    league: nahl
+    level: Tier II
+    enabled: true
+  - name: EP - USPHL NCDC
+    type: eliteprospects
+    league: ncdc
+    level: Tier II
+    enabled: true
+  - name: EP - EHL
+    type: eliteprospects
+    league: ehl
+    level: Tier III Top
+    enabled: true
+  - name: EP - EHLP
+    type: eliteprospects
+    league: ehlp
+    level: Tier III
+    enabled: true
+  - name: EP - USPHL Premier
+    type: eliteprospects
+    league: usphl-premier
+    level: Tier III
+    enabled: true
+  - name: EP - NA3HL
+    type: eliteprospects
+    league: na3hl
+    level: Tier III Top
+    enabled: true
+  - name: EP - USHS Prep
+    type: eliteprospects
+    league: ushs-prep
+    level: Prep
+    enabled: true
+  - name: EP - 18U AAA
+    type: eliteprospects
+    league: 18u-aaa
+    level: 18U AAA
+    enabled: true
+
+  # ---------------------------------------------------------------- League sites
+  # Plain stats pages. Point `url` at the league's skater stats page (and
+  # `goalie_url` at the goalie page if it's separate). Set `render: true` if
+  # the table only shows up after JavaScript runs.
+  - name: EHL
+    type: html_table
+    url: https://www.ehlhockey.com/stats/player-stats
+    league: EHL
+    level: Tier III Top
+    render: true
+    enabled: true
+  - name: EHL Premier
+    type: html_table
+    url: https://www.ehlhockey.com/stats/player-stats?division=premier
+    league: EHLP
+    level: Tier III
+    render: true
+    enabled: false
+
+  # HockeyTech-powered leagues (the stats pages say "powered by HockeyTech" or
+  # load from lscluster.hockeytech.com). To get the key + client code: open the
+  # league's stats page, view source / network tab, search for "key=" and
+  # "client_code=".
+  - name: NAHL
+    type: hockeytech
+    league: NAHL
+    level: Tier II
+    client_code: nahl
+    key: ""
+    enabled: false
+  - name: CCHL
+    type: hockeytech
+    league: CCHL
+    level: Canadian Jr A
+    client_code: cchl
+    key: ""
+    enabled: false
+
+  # ---------------------------------------------------------------- Manual lists
+  # Any CSV dropped in imports/ gets pulled in (EP exports, showcase lists,
+  # lists coaches send over, etc).
+  - name: Imports
+    type: csv_folder
+    path: imports
+    level: Other
+    enabled: true
