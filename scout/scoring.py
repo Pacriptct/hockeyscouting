@@ -57,7 +57,7 @@ def production(players: list[Player], min_games: int) -> None:
 
 def is_committed_elsewhere(p: Player, keep_terms: list[str]) -> bool:
     c = (p.committed or "").strip()
-    if not c or c.lower() in {"-", "none", "uncommitted", "n/a"}:
+    if not c or c.lower() in {"-", "none", "uncommitted", "n/a", "false", "0", "no", "null"}:
         return False
     return not any(t.lower() in c.lower() for t in keep_terms)
 
@@ -101,7 +101,7 @@ def score_all(players: list[Player], cfg: dict) -> list[Player]:
             p.notes.append(f"Top 25% {what} in {p.league}")
         if p.birth_year and years and p.birth_year == min(years):
             p.notes.append("Final junior year - needs a spot next fall")
-        if p.committed:
+        if p.committed and p.committed.lower() not in {"false", "0", "no", "null", "none"}:
             p.notes.append(f"Listed commitment: {p.committed}")
         kept.append(p)
 

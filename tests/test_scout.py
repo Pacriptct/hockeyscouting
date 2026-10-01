@@ -254,3 +254,54 @@ def test_gamesheet_record():
     assert (alex.gp, alex.g, alex.a, alex.pts) == (3, 3, 1, 4)
     assert alex.team == "Philadelphia Little Flyers" and alex.hometown == "Bensalem"
     assert joe.position == "D" and joe.committed == "Univ (ACHA)"
+
+
+def test_timetoscore_goalies_not_mistaken_for_standings():
+    # shape from api.usphl.timetoscore.com/get_goalies
+    g = {"teams": [{"team_id": "2456", "team_ab": "FM", "team_name": "Fresno Monsters", "position": "G"}],
+         "player_name": "Sam Net", "player_id": "1", "team_name": "Fresno Monsters", "jersey": "30",
+         "position": "G", "games_played": "1", "goals_against": "4", "saves": "18", "save_pct": "0.8182",
+         "wins": "0", "losses": "1", "ot_losses": "0", "goals_against_ave": "4.000"}
+    ps = league_site.players_from_json({"goalies": [g, dict(g, player_name="Al Pad")]},
+                                       cfg={"name": "NCDC"}, source_url="u")
+    assert len(ps) == 2
+    assert ps[0].is_goalie and ps[0].sv_pct == 0.8182 and ps[0].gaa == 4.0 and ps[0].team == "Fresno Monsters"
+
+
+def test_committed_flags():
+    keep = score_all([Player(name="A", birth_year=2006, committed="False"),
+                      Player(name="B", birth_year=2006, committed="True")], CFG)
+    assert [p.name for p in keep] == ["A"]
+    assert not keep[0].notes or "commitment" not in " ".join(keep[0].notes)
+
+
+def test_unknown_position_codes_stay_blank():
+    from scout.models import norm_position
+    assert norm_position("A") == "" and norm_position("LW") == "F" and norm_position("forward") == "F"
+    assert norm_position("defense") == "D" and norm_position("Goalie") == "G" and norm_position("C/RW") == "F"
+
+
+def test_gamesheet_direct(monkeypatch):
+    nahl_like = {"status": "success", "data": [
+        {"firstName": "VINCENZO", "lastName": "CAPANO", "birthdate": "2006-06-20", "committed": True,
+         "stats": {"a": 11, "g": 4, "gp": 7, "pts": 15}, "teams": [{"id": 1, "title": "Team A"}]},
+        {"firstName": "JOE", "lastName": "OPEN", "birthdate": "2007-01-01", "committed": False,
+         "stats": {"a": 1, "g": 1, "gp": 7, "pts": 2}, "teams": [{"id": 1, "title": "Team A"}]}]}
+    seen = {}
+
+    class R:
+        status_code = 200
+        text = json.dumps(nahl_like)
+
+    class S:
+        def get(self, url, params=None, headers=None, timeout=None):
+            seen["url"], seen["params"] = url, params
+            return R()
+
+    monkeypatch.setattr(league_site.http, "session", lambda: S())
+    ps = league_site.fetch({"name": "EHL", "url": "https://gamesheetstats.com/seasons/15125/players"}, {})
+    assert seen["url"].endswith("/stats/players") and seen["params"]["filter[seasons]"] == "15125"
+    assert {p.name for p in ps} == {"Vincenzo Capano", "Joe Open"}
+    capano = next(p for p in ps if p.name == "Vincenzo Capano")
+    assert capano.committed == "True" and capano.team == "Team A" and capano.g == 4
+    assert [p.name for p in score_all(ps, CFG)] == ["Joe Open"]

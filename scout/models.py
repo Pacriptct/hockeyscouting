@@ -101,7 +101,9 @@ def norm_position(raw: str) -> str:
         return "G"
     if r.startswith("D") or r in {"LD", "RD"}:
         return "D"
-    return "F"
+    if re.match(r"^(F|FWD|FORWARD|C|CENTER|CENTRE|LW|RW|W|WING|LEFT|RIGHT)\b", r) or re.match(r"^(LW|RW|C)/", r):
+        return "F"
+    return ""  # "A", "UTIL", etc - unknown
 
 
 def to_int(v) -> Optional[int]:

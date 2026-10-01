@@ -55,11 +55,11 @@ JSON_KEYS.update({
     "teamname": "team", "teamtitle": "team", "teamfullname": "team", "teamcode": "team",
     "gamesplayed": "gp", "goals": "g", "assists": "a", "points": "pts", "totalpoints": "pts",
     "penaltyminutes": "pim", "plusminus": "plus_minus",
-    "goalsagainstaverage": "gaa", "savepercentage": "sv_pct", "savepct": "sv_pct",
+    "goalsagainstaverage": "gaa", "goalsagainstave": "gaa", "savepercentage": "sv_pct", "savepct": "sv_pct",
     "birthdate": "dob", "dateofbirth": "dob", "birthday": "dob", "yearofbirth": "birth_year",
     "birthyear": "birth_year", "playerposition": "pos_raw", "position": "pos_raw",
     "positionabbreviation": "pos_raw", "pos": "pos_raw", "positions": "pos_raw",
-    "teamsname": "team", "teamstitle": "team",
+    "teamsname": "team", "teamstitle": "team", "teamscommitted": "committed",
     "committedto": "committed", "teamscommittedto": "committed", "hometown": "hometown",
     "birthplace": "hometown", "shoots": "shoots", "catches": "shoots",
 })
@@ -137,7 +137,7 @@ def _flatten(d: dict, prefix: str = "", depth: int = 0) -> dict:
     return out
 
 
-TEAM_PRIORITY = ["teamname", "teamsname", "teamtitle", "teamstitle", "teamfullname", "team",
+TEAM_PRIORITY = ["teamname", "teamsname", "teams", "teamtitle", "teamstitle", "teamfullname", "team",
                  "teamcode", "teamsabbreviation", "teamabbreviation"]
 
 
@@ -158,6 +158,9 @@ def json_row_values(item: dict) -> dict:
     return values
 
 
+# keys that only show up on a player (goalie rows have wins/losses too)
+PLAYER_KEYS = {"playerid", "playername", "firstname", "lastname", "jersey", "birthdate", "dob",
+               "position", "positions", "hometown", "playerfirstname", "playerlastname"}
 STANDINGS_KEYS = {"wins", "losses", "w", "l", "otl", "sol", "ties", "gf", "ga", "streak", "rank"}
 
 
@@ -165,7 +168,8 @@ def _looks_like_players(rows: list[dict], raw: list[dict] | None = None) -> bool
     if len(rows) < 2:
         return False
     if raw:
-        standings = sum(1 for r in raw[:30] if len(STANDINGS_KEYS & set(_flatten(r))) >= 2)
+        standings = sum(1 for r in raw[:30]
+                        if len(STANDINGS_KEYS & set(_flatten(r))) >= 2 and not (PLAYER_KEYS & set(_flatten(r))))
         if standings >= len(raw[:30]) / 2:
             return False
     hits = 0
@@ -324,7 +328,7 @@ def page_through_feeds(page, feeds: list) -> list:
         if base in tried_bases:
             continue
         tried_bases.add(base)
-        misses = 0
+        log.debug("paging through %s", feed_url)
         for u in _feed_pages(feed_url):
             if u in have:
                 continue
@@ -338,14 +342,12 @@ def page_through_feeds(page, feeds: list) -> list:
                     break
                 page.wait_for_timeout(3000 * (attempt + 1))
             if status != 200:
-                log.debug("stopped paging %s at %s (status %s)", feed_url, u, status)
+                log.info("  blocked while paging (status %s) at %s", status, u[:120])
                 break
             data = loads_loose(text)
             if data is None or not players_from_json(data, cfg={"name": "x"}, source_url=""):
-                misses += 1
-                if misses >= 1:
-                    break
-                continue
+                log.debug("paging %s ended at %s (no players in response: %s)", feed_url, u, text[:120])
+                break
             have.add(u)
             extra.append((u, data))
             page.wait_for_timeout(1200)
@@ -393,8 +395,13 @@ def load(url: str, render: bool) -> tuple[str, list[tuple[str, object]]]:
             pass
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(executable_path=os.environ.get("CHROMIUM_PATH") or None)
-        page = browser.new_page(user_agent=http.UA, viewport={"width": 1400, "height": 1000})
+        browser = p.chromium.launch(executable_path=os.environ.get("CHROMIUM_PATH") or None,
+                                    args=["--disable-blink-features=AutomationControlled"])
+        # look like a normal Chrome of the same version (bot checks compare these)
+        major = browser.version.split(".")[0]
+        ua = re.sub(r"Chrome/[\d.]+", f"Chrome/{major}.0.0.0", http.UA)
+        page = browser.new_page(user_agent=ua, viewport={"width": 1400, "height": 1000}, locale="en-US")
+        page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page.on("response", on_response)
         # some league sites never go quiet (ads, video) - read what's there
         try:
@@ -426,7 +433,46 @@ def load(url: str, render: bool) -> tuple[str, list[tuple[str, object]]]:
     return html + "".join(fragments), feeds
 
 
+GAMESHEET_SEASON = re.compile(r"gamesheetstats\.com/seasons/(\d+)")
+GAMESHEET_GATEWAY = "https://gateway.gamesheet.io/stats/{kind}"
+
+
+def gamesheet_direct(url: str, cfg: dict, goalie: bool) -> list[Player]:
+    """GameSheet stats pages load 20 players at a time behind bot protection,
+    but GameSheet's gateway (what league sites like nahl.com use) returns the
+    whole season in one request."""
+    m = GAMESHEET_SEASON.search(url)
+    if not m:
+        return []
+    season = m.group(1)
+    headers = {"Origin": "https://gamesheetstats.com", "Referer": "https://gamesheetstats.com/",
+               "Accept": "application/json"}
+    kinds = ["goalies", "players"] if goalie else ["players"]
+    for kind in kinds:
+        params = {"filter[seasons]": season, "filter[teams]": "", "filter[qualified-goalies]": "true"}
+        try:
+            r = http.session().get(GAMESHEET_GATEWAY.format(kind=kind), params=params,
+                                   headers=headers, timeout=30)
+        except Exception as e:
+            log.debug("GameSheet gateway %s failed: %s", kind, e)
+            continue
+        if r.status_code != 200:
+            log.debug("GameSheet gateway %s -> %s", kind, r.status_code)
+            continue
+        ps = players_from_json(loads_loose(r.text), cfg=cfg, source_url=url,
+                              goalie_hint=goalie and kind == "goalies")
+        if goalie:
+            ps = [p for p in ps if p.is_goalie or kind == "goalies"]
+        if ps:
+            log.info("  GameSheet season %s: %d %s in one request", season, len(ps), kind)
+            return ps
+    return []
+
+
 def scrape_url(url: str, cfg: dict, goalie=False) -> list[Player]:
+    direct = gamesheet_direct(url, cfg, goalie)
+    if direct:
+        return direct
     render = bool(cfg.get("render"))
     max_pages = int(cfg.get("max_pages", 25))
     common = dict(league=cfg.get("league", ""), level=cfg.get("level", "Other"),
@@ -496,7 +542,7 @@ def best_per_player(players: list[Player]) -> list[Player]:
             best = max(c, key=lambda x: x.gp or 0)
             for other in c:
                 for f in ("birth_year", "dob", "profile_url", "hometown", "shoots", "position",
-                          "pos_raw", "height", "weight"):
+                          "pos_raw", "height", "weight", "team", "committed", "email"):
                     if not getattr(best, f) and getattr(other, f):
                         setattr(best, f, getattr(other, f))
             out.append(best)
