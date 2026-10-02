@@ -14,9 +14,37 @@ const PAGE = 100;
 const FOLLOW_UP_DAYS = 5;
 
 const DEFAULT_TEMPLATES = {
-  subject: "Wittenberg Hockey - {first}",
+  subject: "Wittenberg Hockey",
   email:
-`Hi {first},
+`Hey {first},
+
+My name's {me} and I play hockey at Wittenberg University in Springfield, Ohio. I've been helping our program connect with some potential recruits, and I came across you while looking at players for upcoming classes. I saw your season with {team} in the {league}.
+
+I think Wittenberg could be worth checking out for you. We've got a great group of guys, a competitive hockey program, and a lot of opportunity to come in and make an impact.
+
+If you're still figuring out your plans for college hockey, I'd be happy to tell you more about the program, what it's like being a player here, and get you connected with our coaching staff if you're interested.
+
+Let me know, I'd be happy to answer any questions you have!
+
+{me}
+Wittenberg University Hockey`,
+  dm:
+`Hey {first}, what's up man! My name's {me} and I play hockey at Wittenberg University. I've been helping our program connect with some potential recruits, and I came across you while looking at players for upcoming classes.
+
+I wanted to reach out because I think Wittenberg could be worth checking out for you. We've got a great group of guys, a competitive hockey program, and a lot of opportunity to come in and make an impact.
+
+If you're still figuring out your plans for college hockey, I'd be happy to tell you more about the program, what it's like being a player here, and get you connected with our coaching staff if you're interested.
+
+Let me know man, I'd be happy to answer any questions you have!`,
+  followup:
+`Hey {first}, just wanted to follow up on my message about Wittenberg. No pressure at all, but if you're still figuring out where you want to play college hockey I'd love to tell you more about it. Let me know man!`,
+};
+
+// earlier default texts - if a browser still has one of these saved, swap in
+// the current default instead of keeping the old wording
+const OLD_DEFAULTS = {
+  subject: ["Wittenberg Hockey - {first}"],
+  email: [`Hi {first},
 
 My name is {coach} and I'm with the men's hockey program at Wittenberg University in Springfield, Ohio. I've been following your season with {team} in the {league} and I like what I'm seeing.
 
@@ -27,11 +55,9 @@ I'd love to set up a call to tell you more about the program and hear about your
 Thanks,
 {coach}
 Wittenberg University Men's Hockey
-{coach_email} {coach_phone}`,
-  dm:
-`Hey {first}, {coach} here with Wittenberg University hockey (Ohio). Been watching your year with {team} and would love to talk about playing college hockey for us. What's the best email or number to reach you?`,
-  followup:
-`Hey {first}, just following up on my message about Wittenberg hockey. We're building something special as we move toward NCAA D3 and think you'd be a great fit. Would you be open to a quick call this week?`,
+{coach_email} {coach_phone}`],
+  dm: [`Hey {first}, {coach} here with Wittenberg University hockey (Ohio). Been watching your year with {team} and would love to talk about playing college hockey for us. What's the best email or number to reach you?`],
+  followup: [`Hey {first}, just following up on my message about Wittenberg hockey. We're building something special as we move toward NCAA D3 and think you'd be a great fit. Would you be open to a quick call this week?`],
 };
 
 const POS_WORD = { F: "forward", D: "defenseman", G: "goalie" };
@@ -43,7 +69,11 @@ const store = {
 
 let DATA = { players: [], sources: [], program: {} };
 let tracking = store.get("wu-tracking", {});   // id -> {status, note, updated}
-let templates = { ...DEFAULT_TEMPLATES, ...store.get("wu-templates", {}) };
+let templates = (() => {
+  const saved = store.get("wu-templates", {});
+  for (const [k, olds] of Object.entries(OLD_DEFAULTS)) if (olds.includes(saved[k])) delete saved[k];
+  return { ...DEFAULT_TEMPLATES, ...saved };
+})();
 let sortKey = "score", sortDir = -1, shown = PAGE;
 
 const $ = (s) => document.querySelector(s);
@@ -162,6 +192,7 @@ function fill(tpl, p) {
     first, last: nameCase(p.last_name || rest.join(" ")), name: nameCase(p.name), team: p.team || "your team",
     league: p.league || "", position: POS_WORD[p.position] || "player",
     coach: templates.coach || DATA.program.coach_name || "",
+    me: templates.coach || DATA.program.coach_name || "",
     coach_email: templates.coach_email || DATA.program.coach_email || "",
     coach_phone: templates.coach_phone || DATA.program.coach_phone || "",
   };
@@ -192,7 +223,7 @@ function links(p) {
 
 function coachSet() {
   if (templates.coach || DATA.program.coach_name) return true;
-  const name = (prompt("Your name for the messages (e.g. Coach Smith):") || "").trim();
+  const name = (prompt("Your name for the messages (e.g. Dylan McLean):") || "").trim();
   if (!name) { toast("Add your name in the Templates tab first"); return false; }
   templates = { ...templates, coach: name };
   store.set("wu-templates", templates);

@@ -7,7 +7,7 @@
 program:
   name: Wittenberg University Men's Hockey
   level: ACHA D2 (moving to NCAA D3)
-  coach_name: ""          # shows up in the email/DM templates
+  coach_name: "Dylan McLean"   # who the DMs/emails are from ({me} in templates)
   coach_email: ""
   coach_phone: ""
 

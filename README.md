@@ -42,7 +42,7 @@ GAA. All the weights are in `config.yaml`.
 - **Copy email / Open in mail app**: same idea for email.
 - **Status**: Not reviewed → Checked → Reached out → Talking → Visit → Pass.
 - **My pipeline**: everyone you've marked, by status.
-- **Templates**: edit the DM, follow-up, email, coach name/email/phone.
+- **Templates**: edit the DM, follow-up, email, and your name/email/phone.
 - **Export CSV**: whatever's currently filtered, with your statuses + notes.
 
 Statuses and notes are saved in the browser. Use *Templates → Download
