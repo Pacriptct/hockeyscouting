@@ -51,18 +51,24 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  // an open popup sits on top of the page, so the toast has to live inside it
+  const open = document.querySelector("dialog[open]");
+  const home = open || document.body;
+  if (t.parentElement !== home) home.appendChild(t);
   clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove("show"), 1800);
 }
 
 function track(id) { return tracking[id] || {}; }
 const igHandle = (p) => (track(p.id).ig || p.socials?.instagram || "").trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/.*$/, "");
-const daysSince = (d) => d ? Math.floor((Date.now() - new Date(d + "T12:00:00").getTime()) / 86400000) : null;
+// dates are stored as local YYYY-MM-DD so "today" matches the coach's clock
+const localToday = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const daysSince = (d) => d ? Math.round((Date.parse(localToday() + "T00:00:00") - Date.parse(d + "T00:00:00")) / 86400000) : null;
 function followUpDue(p) {
   const t = track(p.id);
   return t.status === "contacted" && t.dm_date && daysSince(t.dm_date) >= FOLLOW_UP_DAYS;
 }
 function setTrack(id, patch) {
-  tracking[id] = { ...track(id), ...patch, updated: new Date().toISOString().slice(0, 10) };
+  tracking[id] = { ...track(id), ...patch, updated: localToday() };
   store.set("wu-tracking", tracking);
 }
 
@@ -186,13 +192,48 @@ function links(p) {
 
 function coachSet() {
   if (templates.coach || DATA.program.coach_name) return true;
-  toast("Add your name in the Templates tab first");
-  return false;
+  const name = (prompt("Your name for the messages (e.g. Coach Smith):") || "").trim();
+  if (!name) { toast("Add your name in the Templates tab first"); return false; }
+  templates = { ...templates, coach: name };
+  store.set("wu-templates", templates);
+  loadTemplateForm();
+  return true;
 }
 
-async function copy(text, what) {
-  try { await navigator.clipboard.writeText(text); toast(`${what} copied`); }
-  catch { prompt(`Copy the ${what.toLowerCase()}:`, text); }
+// works without the clipboard API (http://, older browsers, some phones)
+function copyFallback(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+  (document.querySelector("dialog[open]") || document.body).appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch {}
+  ta.remove();
+  return ok;
+}
+
+function flash(btn, label) {
+  if (!btn) return;
+  btn.dataset.label = btn.dataset.label || btn.textContent;
+  btn.textContent = label;
+  clearTimeout(btn.flashTimer);
+  btn.flashTimer = setTimeout(() => { btn.textContent = btn.dataset.label; }, 1600);
+}
+
+function copy(text, what, btn) {
+  // the fallback runs right inside the click, so it works even where the
+  // clipboard API is blocked
+  if (copyFallback(text)) { toast(`${what} copied`); flash(btn, "Copied ✓"); return; }
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => { toast(`${what} copied`); flash(btn, "Copied ✓"); })
+      .catch(() => prompt(`Copy the ${what.toLowerCase()}:`, text));
+    return;
+  }
+  prompt(`Copy the ${what.toLowerCase()}:`, text);
 }
 
 function openDetail(id) {
@@ -238,40 +279,46 @@ function openDetail(id) {
     <p class="sub">Found via ${esc(p.source)} · first seen ${esc(p.first_seen)}${t.updated ? ` · updated ${esc(t.updated)}` : ""}</p>
   </div>`;
   const save = () => { setTrack(id, { status: $("#d-status").value, note: $("#d-note").value, email: $("#d-email").value.trim(), ig: $("#d-ig").value.trim().replace(/^@/, "") }); renderBoard(); renderPipeline(); };
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = localToday;
+  const refreshDmInfo = () => {
+    const x = track(id);
+    $("#d-dm-info").textContent = x.dm_date
+      ? `DM'd ${x.dm_date} (${daysSince(x.dm_date)} days ago)` + (x.followups ? ` · ${x.followups} follow-up${x.followups > 1 ? "s" : ""}, last ${x.followup_date || ""}` : "")
+      : "Not DM'd yet";
+  };
   $("#d-ig").addEventListener("change", () => { save(); $("#d-ig-find").hidden = !!igHandle(p); });
   $("#d-dm-go").onclick = () => {
     if (!coachSet()) return;
     const h = $("#d-ig").value.trim().replace(/^@/, "");
     // copy + open in the same tap: phones block new tabs opened after a wait
-    copy(fill(templates.dm, p), "DM");
+    copy(fill(templates.dm, p), "DM", $("#d-dm-go"));
     if (!h) { toast("DM copied - find his IG first, then paste it"); $("#d-ig-find").hidden = false; return; }
     if (!t.status || t.status === "verified") $("#d-status").value = "contacted";
     save();
     if (!track(id).dm_date) setTrack(id, { dm_date: today() });
     // ig.me/m/<handle> opens the DM thread straight away in the app
     window.open(`https://ig.me/m/${encodeURIComponent(h)}`, "_blank", "noopener");
-    openDetail(id);
+    refreshDmInfo();
   };
   $("#d-followup").onclick = () => {
     if (!coachSet()) return;
-    copy(fill(templates.followup, p), "Follow-up");
+    copy(fill(templates.followup, p), "Follow-up", $("#d-followup"));
     setTrack(id, { followups: (track(id).followups || 0) + 1, followup_date: today(), dm_date: track(id).dm_date || today() });
     const h = igHandle(p);
     if (h) window.open(`https://ig.me/m/${encodeURIComponent(h)}`, "_blank", "noopener");
-    renderBoard(); openDetail(id);
+    renderBoard(); refreshDmInfo();
   };
   $("#d-status").addEventListener("change", save);
   $("#d-note").addEventListener("change", save);
   $("#d-email").addEventListener("change", save);
-  $("#d-copy-email").onclick = () => copy(`${fill(templates.subject, p)}\n\n${fill(templates.email, p)}`, "Email");
-  $("#d-copy-dm").onclick = () => coachSet() && copy(fill(templates.dm, p), "DM");
+  $("#d-copy-email").onclick = () => coachSet() && copy(`${fill(templates.subject, p)}\n\n${fill(templates.email, p)}`, "Email", $("#d-copy-email"));
+  $("#d-copy-dm").onclick = () => coachSet() && copy(fill(templates.dm, p), "DM", $("#d-copy-dm"));
   $("#d-mail").onclick = () => {
     const to = $("#d-email").value.trim();
     location.href = `mailto:${to.includes("@") && !to.startsWith("@") ? encodeURIComponent(to) : ""}?subject=${encodeURIComponent(fill(templates.subject, p))}&body=${encodeURIComponent(fill(templates.email, p))}`;
     if (!track(id).status || track(id).status === "verified") { $("#d-status").value = "contacted"; save(); }
   };
-  $("#detail").showModal();
+  if (!$("#detail").open) $("#detail").showModal();
 }
 
 // ---------------------------------------------------------------- pipeline
